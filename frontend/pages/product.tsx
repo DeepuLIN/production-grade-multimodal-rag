@@ -26,10 +26,18 @@ type Match = {
   source: string;
   filename?: string;
   page?: number;
-  score?: number;
+
+  vector_score?: number | null;
+  bm25_score?: number | null;
+  rrf_score?: number | null;
+
+  vector_rank?: number | null;
+  bm25_rank?: number | null;
+
   text: string;
   document_id?: string;
   project_id?: string;
+  chunk_index?: number | null;
 };
 
 function shortName(name?: string, max = 44) {
@@ -548,10 +556,44 @@ if (lastDocumentId) {
                       className="mb-3 max-w-full truncate text-sm text-slate-500"
                     >
                       Source: {selectedMatchObject.filename || selectedMatchObject.source}
-                      {selectedMatchObject.score !== undefined
-                        ? ` · Score ${selectedMatchObject.score.toFixed(3)}`
+
+                      {selectedMatchObject.chunk_index !== undefined &&
+                      selectedMatchObject.chunk_index !== null
+                        ? ` · Chunk ${selectedMatchObject.chunk_index}`
                         : ""}
                     </p>
+
+                    <div className="mb-3 mt-2 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+                      <div className="rounded-xl bg-slate-100 px-3 py-2">
+                        <p className="font-semibold text-slate-500">Vector</p>
+                        <p className="font-bold text-slate-900">
+                          {selectedMatchObject.vector_score !== undefined &&
+                          selectedMatchObject.vector_score !== null
+                            ? selectedMatchObject.vector_score.toFixed(3)
+                            : "—"}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-slate-100 px-3 py-2">
+                        <p className="font-semibold text-slate-500">BM25</p>
+                        <p className="font-bold text-slate-900">
+                          {selectedMatchObject.bm25_score !== undefined &&
+                          selectedMatchObject.bm25_score !== null
+                            ? selectedMatchObject.bm25_score.toFixed(3)
+                            : "—"}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-slate-100 px-3 py-2">
+                        <p className="font-semibold text-slate-500">RRF</p>
+                        <p className="font-bold text-slate-900">
+                          {selectedMatchObject.rrf_score !== undefined &&
+                          selectedMatchObject.rrf_score !== null
+                            ? selectedMatchObject.rrf_score.toFixed(4)
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
 
                     <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
                       {selectedMatchObject.text}
@@ -573,10 +615,41 @@ if (lastDocumentId) {
                           className="mb-2 max-w-full truncate text-sm text-slate-500"
                         >
                           Source: {match.filename || match.source}
-                          {match.score !== undefined
-                            ? ` · Score ${match.score.toFixed(3)}`
+                          {match.chunk_index !== undefined && match.chunk_index !== null
+                            ? ` · Chunk ${match.chunk_index}`
                             : ""}
                         </p>
+                        <div className="mb-3 mt-2 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+                          <div className="rounded-xl bg-slate-100 px-3 py-2">
+                            <p className="font-semibold text-slate-500">Vector</p>
+                            <p className="font-bold text-slate-900">
+                              {match.vector_score !== undefined &&
+                              match.vector_score !== null
+                                ? match.vector_score.toFixed(3)
+                                : "—"}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl bg-slate-100 px-3 py-2">
+                            <p className="font-semibold text-slate-500">BM25</p>
+                            <p className="font-bold text-slate-900">
+                              {match.bm25_score !== undefined &&
+                              match.bm25_score !== null
+                                ? match.bm25_score.toFixed(3)
+                                : "—"}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl bg-slate-100 px-3 py-2">
+                            <p className="font-semibold text-slate-500">RRF</p>
+                            <p className="font-bold text-slate-900">
+                              {match.rrf_score !== undefined &&
+                              match.rrf_score !== null
+                                ? match.rrf_score.toFixed(4)
+                                : "—"}
+                            </p>
+                          </div>
+                        </div>
 
                         <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
                           {match.text}

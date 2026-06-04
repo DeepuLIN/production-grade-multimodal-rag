@@ -226,31 +226,51 @@ def rrf_merge(vector_results, bm25_results, k: int = 60):
     scores = {}
     items = {}
 
+    def make_key(item):
+        return (
+            item.get("document_id"),
+            item.get("chunk_index"),
+            item.get("text"),
+        )
+
     for rank, item in enumerate(vector_results):
         text = item.get("text")
         if not text:
             continue
 
-        key = text
+        key = make_key(item)
         scores[key] = scores.get(key, 0) + 1 / (k + rank + 1)
-        items[key] = item
+
+        merged_item = item.copy()
+        merged_item["vector_rank"] = rank + 1
+        merged_item["bm25_rank"] = None
+        merged_item.setdefault("bm25_score", None)
+
+        items[key] = merged_item
 
     for rank, item in enumerate(bm25_results):
         text = item.get("text")
         if not text:
             continue
 
-        key = text
+        key = make_key(item)
         scores[key] = scores.get(key, 0) + 1 / (k + rank + 1)
 
-        if key not in items:
-            items[key] = item
+        if key in items:
+            items[key]["bm25_score"] = item.get("bm25_score")
+            items[key]["bm25_rank"] = rank + 1
+        else:
+            merged_item = item.copy()
+            merged_item["bm25_rank"] = rank + 1
+            merged_item["vector_rank"] = None
+            merged_item.setdefault("vector_score", None)
+            items[key] = merged_item
 
     merged = []
 
-    for text, score in sorted(scores.items(), key=lambda x: x[1], reverse=True):
-        merged_item = items[text].copy()
-        merged_item["rrf_score"] = score
+    for key, score in sorted(scores.items(), key=lambda x: x[1], reverse=True):
+        merged_item = items[key]
+        merged_item["rrf_score"] = float(score)
         merged.append(merged_item)
 
     return merged
@@ -280,7 +300,52 @@ def debug_qdrant_counts(
 
     except Exception as e:
         print("⚠️ QDRANT COUNT DEBUG FAILED:", str(e))
+def rebuild_bm25_from_qdrant(
+    client: QdrantClient,
+    user_id: str | None = None,
+    project_id: str | None = None,
+    document_id: str | None = None,
+):
+    qdrant_filter = build_qdrant_filter(
+        user_id=user_id,
+        project_id=project_id,
+        document_id=document_id,
+    )
 
+    points, _ = client.scroll(
+        collection_name=QDRANT_COLLECTION,
+        scroll_filter=qdrant_filter,
+        limit=1000,
+        with_payload=True,
+        with_vectors=False,
+    )
+
+    bm25_items = []
+
+    for p in points:
+        payload = p.payload or {}
+        text = payload.get("text")
+
+        if not text:
+            continue
+
+        bm25_items.append(
+            {
+                "text": text,
+                "metadata": {
+                    "user_id": payload.get("user_id"),
+                    "project_id": payload.get("project_id"),
+                    "document_id": payload.get("document_id"),
+                    "filename": payload.get("filename"),
+                    "chunk_index": payload.get("chunk_index"),
+                },
+            }
+        )
+
+    bm25_index.build(bm25_items)
+
+    print("✅ Rebuilt BM25 from Qdrant")
+    print("🔥 BM25 REBUILT ITEMS:", len(bm25_index.items))
 
 def search_chunks(
     query: str,
@@ -318,7 +383,7 @@ def search_chunks(
 
             vector_results.append(
                 {
-                    "score": r.score,
+                    "vector_score": float(r.score),
                     "text": payload.get("text"),
                     "document_id": payload.get("document_id"),
                     
@@ -328,6 +393,19 @@ def search_chunks(
                     "chunk_index": payload.get("chunk_index"),
                 }
             )
+        print("🔥 BM25 TOTAL ITEMS BEFORE SEARCH:", len(bm25_index.items))
+        print("🔥 BM25 INDEX EXISTS BEFORE SEARCH:", bm25_index.bm25 is not None)
+        if not bm25_index.bm25 or len(bm25_index.items) == 0:
+            print("⚠️ BM25 empty. Rebuilding from Qdrant...")
+            rebuild_bm25_from_qdrant(
+                client=client,
+                user_id=user_id,
+                project_id=project_id,
+                document_id=document_id,
+            )
+
+        print("🔥 BM25 TOTAL ITEMS BEFORE SEARCH:", len(bm25_index.items))
+        print("🔥 BM25 INDEX EXISTS BEFORE SEARCH:", bm25_index.bm25 is not None)
 
         bm25_results = bm25_index.search(
             query=query,

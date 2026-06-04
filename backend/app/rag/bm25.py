@@ -64,7 +64,7 @@ class BM25Index:
 
             results.append({
                 "text": item["text"],
-                "score": float(score),
+                "bm25_score": float(score),
                 "chunk_index": metadata.get("chunk_index", idx),
                 "document_id": metadata.get("document_id"),
                 "qdrant_document_id": metadata.get("qdrant_document_id"),
@@ -73,5 +73,5 @@ class BM25Index:
                 "filename": metadata.get("filename"),
             })
 
-        results.sort(key=lambda x: x["score"], reverse=True)
+        results.sort(key=lambda x: x["bm25_score"], reverse=True)
         return results[:top_k]

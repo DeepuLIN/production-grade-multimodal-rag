@@ -25,15 +25,26 @@ class AskRequest(BaseModel):
 
 class MatchOut(BaseModel):
     rank: int
+
     source: str
     filename: str | None = None
     page: int | None = 1
-    score: float | None = None
+
+    # Retrieval Inspector Scores
+    vector_score: float | None = None
+    bm25_score: float | None = None
     rrf_score: float | None = None
+
+    # Retrieval Inspector Ranks
+    vector_rank: int | None = None
+    bm25_rank: int | None = None
+
     text: str
+
     document_id: str | None = None
     project_id: str | None = None
     user_id: str | None = None
+
     chunk_index: int | None = None
 
 
@@ -176,7 +187,10 @@ def normalize_matches(results: dict, top_k: int = 5) -> list[MatchOut]:
                 source=item.get("filename") or "uploaded_document",
                 filename=item.get("filename"),
                 page=item.get("page", 1),
-                score=item.get("score"),
+                vector_score=item.get("vector_score"),
+                bm25_score=item.get("bm25_score"),
+                vector_rank=item.get("vector_rank"),
+                bm25_rank=item.get("bm25_rank"),
                 rrf_score=item.get("rrf_score"),
                 text=text,
                 document_id=item.get("document_id"),
