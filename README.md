@@ -176,42 +176,43 @@ Streaming Answer
 
 ## Frontend
 
-* Next.js 15
-* React
-* TypeScript
-* Tailwind CSS
-* Clerk Authentication
-* Vercel
+* ![Next.js](https://img.shields.io/badge/-Next.js-black?logo=next.js&style=flat-square) Next.js 15
+* ![React](https://img.shields.io/badge/-React-61DAFB?logo=react&style=flat-square) React
+* ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&style=flat-square) TypeScript
+* ![Tailwind](https://img.shields.io/badge/-Tailwind-06B6D4?logo=tailwindcss&style=flat-square) Tailwind CSS
+* ![Clerk](https://img.shields.io/badge/-Clerk-6C47FF?style=flat-square) Clerk Authentication
+* ![Vercel](https://img.shields.io/badge/-Vercel-black?logo=vercel&style=flat-square) Vercel
 
 ## Backend
 
-* FastAPI
-* Python 3.13
-* SQLAlchemy
-* PyMuPDF
-* OCR Pipeline
+* ![FastAPI](https://img.shields.io/badge/-FastAPI-009688?logo=fastapi&style=flat-square) FastAPI
+* ![Python](https://img.shields.io/badge/-Python-3776AB?logo=python&style=flat-square) Python 3.13
+* ![SQLAlchemy](https://img.shields.io/badge/-SQLAlchemy-D71F00?style=flat-square) SQLAlchemy
+* ![PyMuPDF](https://img.shields.io/badge/-PyMuPDF-4B4B4B?style=flat-square) PyMuPDF
+* ![OCR](https://img.shields.io/badge/-OCR-4285F4?style=flat-square) OCR Pipeline
 
 ## AI / RAG
 
-* OpenRouter
-* Embedding Models
-* Hybrid Retrieval
-* Reciprocal Rank Fusion (RRF)
-* Markdown Chunking
+* ![OpenRouter](https://img.shields.io/badge/-OpenRouter-black?style=flat-square) OpenRouter
+* ![Embeddings](https://img.shields.io/badge/-Embeddings-blue?style=flat-square) Embedding Models
+* ![Hybrid Retrieval](https://img.shields.io/badge/-Hybrid_Retrieval-green?style=flat-square) Hybrid Retrieval
+* ![RRF](https://img.shields.io/badge/-RRF-orange?style=flat-square) Reciprocal Rank Fusion (RRF)
+* ![Markdown](https://img.shields.io/badge/-Markdown-000000?logo=markdown&style=flat-square) Markdown Chunking
 
 ## Data Layer
 
-* PostgreSQL (Neon)
-* Qdrant Vector Database
-* Amazon S3
+* ![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-4169E1?logo=postgresql&style=flat-square) PostgreSQL (Neon)
+* ![Qdrant](https://img.shields.io/badge/-Qdrant-DC244C?style=flat-square) Qdrant Vector Database
+* ![S3](https://img.shields.io/badge/-Amazon_S3-569A31?logo=amazons3&style=flat-square) Amazon S3
 
 ## Infrastructure
 
-* Docker
-* AWS Lambda
-* AWS ECR
-* Lambda Web Adapter
-* Vercel
+* ![Docker](https://img.shields.io/badge/-Docker-2496ED?logo=docker&style=flat-square) Docker
+* ![Lambda](https://img.shields.io/badge/-AWS_Lambda-FF9900?logo=awslambda&style=flat-square) AWS Lambda
+* ![ECR](https://img.shields.io/badge/-AWS_ECR-FF9900?style=flat-square) AWS ECR
+* ![Lambda Web Adapter](https://img.shields.io/badge/-Lambda_Web_Adapter-yellow?style=flat-square) Lambda Web Adapter
+* ![Vercel](https://img.shields.io/badge/-Vercel-black?logo=vercel&style=flat-square) Vercel
+
 
 ---
 
