@@ -264,11 +264,27 @@ Verified Health Checks:
 * Document Upload
 * OCR Pipeline
 * Image Understanding
+* Diagram-Aware OCR
 * Markdown Conversion
 * Chunking Pipeline
-* Vector Storage
+* Amazon Titan Embeddings
+* Qdrant Vector Storage
+* PostgreSQL Metadata Storage
+* Amazon S3 Storage
 * Hybrid Retrieval
+* Reciprocal Rank Fusion
 * Streaming Responses
+
+### Retrieval Inspector v1
+
+* Retrieved Chunk Display
+* Source Filename Display
+* Chunk Index Display
+* Vector Score Display
+* BM25 Score Display
+* RRF Score Display
+* Retrieval Ranking Transparency
+* Automatic BM25 Rebuild from Qdrant after Lambda cold starts
 
 ### Cloud Deployment
 
@@ -278,6 +294,7 @@ Verified Health Checks:
 * Amazon S3
 * Neon PostgreSQL
 * Qdrant
+* Vercel Frontend Deployment
 
 ### Production Readiness
 
@@ -286,10 +303,27 @@ Verified Health Checks:
 * Container Security
 * JWT Authentication
 * User Isolation
+* Project Isolation
+* Production CORS Configuration
 
 ---
 
 # Release History
+
+## v1.1.0 — Retrieval Inspector v1
+
+### Features
+
+* Added Retrieval Inspector panel
+* Added vector score visibility
+* Added BM25 score visibility
+* Added RRF score visibility
+* Added chunk index visibility
+* Added source filename visibility
+* Added hybrid retrieval transparency
+* Added automatic BM25 rebuild from Qdrant for Lambda cold starts
+
+---
 
 ## v1.0.0 — Production-Hardened MVP
 
@@ -299,8 +333,10 @@ Verified Health Checks:
 * Image Upload
 * OCR Processing
 * Image Caption Processing
+* Diagram-Aware OCR
 * Markdown Conversion
 * Chunking Pipeline
+* Amazon Titan Embeddings
 * Qdrant Integration
 * PostgreSQL Integration
 * S3 Storage
@@ -309,21 +345,10 @@ Verified Health Checks:
 * Health Monitoring
 * Upload Validation
 
+
 ---
 
 # Planned Roadmap
-
-## v1.1.0 — Retrieval Inspector
-
-Visualize:
-
-* Retrieved Chunks
-* Chunk Ranking
-* Vector Scores
-* RRF Scores
-* Final Context
-
----
 
 ## v1.2.0 — Evaluation Dashboard
 
@@ -345,8 +370,12 @@ Metrics:
 * Cross Encoder Reranking
 * Improved Hybrid Search
 * Query Rewriting
+* Better Numeric/Table Reasoning
+* Improved Answer Grounding for Comparisons and Conditions
 
 ---
+
+
 
 ## v2.0.0 — Visual RAG
 
