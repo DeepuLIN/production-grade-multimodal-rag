@@ -1,348 +1,422 @@
 # NoteVision AI
 
-![Vercel](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel)
-![AWS Lambda](https://img.shields.io/badge/Backend-AWS%20Lambda-orange?logo=awslambda)
-![Docker](https://img.shields.io/badge/Containerized-Docker-blue?logo=docker)
-![Next.js](https://img.shields.io/badge/Frontend-Next.js-black?logo=next.js)
-![FastAPI](https://img.shields.io/badge/Backend-FastAPI-green?logo=fastapi)
+![Python](https://img.shields.io/badge/Python-3.13-blue?logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi)
+![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-blue?logo=postgresql)
+![Qdrant](https://img.shields.io/badge/Qdrant-VectorDB-red)
+![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-orange?logo=awslambda)
+![Amazon S3](https://img.shields.io/badge/AWS-S3-orange?logo=amazons3)
+![Docker](https://img.shields.io/badge/Docker-Containerized-blue?logo=docker)
+![Vercel](https://img.shields.io/badge/Vercel-Frontend-black?logo=vercel)
 ![Clerk](https://img.shields.io/badge/Auth-Clerk-purple)
-![OpenRouter](https://img.shields.io/badge/AI-OpenRouter-black)
-![Qwen2.5--VL](https://img.shields.io/badge/Vision-Qwen2.5--VL-success)
+![OpenRouter](https://img.shields.io/badge/LLM-OpenRouter-black)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Status](https://img.shields.io/badge/Status-MVP%20Complete-success)
 
-NoteVision AI is an AI-powered OCR SaaS application that converts handwritten notes, scanned pages, images, and PDFs into clean digital text using Vision Language Models.
+A production-grade multimodal Retrieval-Augmented Generation (RAG) platform designed for intelligent document understanding, knowledge retrieval, and question answering across PDFs, scanned documents, images, and mixed-content files.
 
-The project started with a Vercel-hosted Next.js frontend and then evolved into a Dockerized full-stack deployment on AWS Lambda using Lambda Function URLs and response streaming.
-
----
-
-## Features
-
-- Clerk authentication
-- Clerk subscription gating
-- Image upload support
-- PDF upload support
-- AI-powered handwritten and printed text extraction
-- Streaming text output
-- FastAPI backend
-- Next.js frontend
-- Vercel frontend deployment
-- Dockerized full-stack deployment
-- AWS Lambda container deployment
-- Lambda Function URL with response streaming
-- OpenRouter Qwen Vision model integration
+The system combines OCR, image understanding, hybrid retrieval, vector search, metadata filtering, and cloud-native deployment to provide a scalable document intelligence platform.
 
 ---
 
-## Tech Stack
+# Overview
 
-### Frontend
+Traditional RAG systems are typically limited to plain text documents and simple vector search.
 
-- Next.js
-- TypeScript
-- Tailwind CSS
-- Clerk Authentication
-- Clerk Billing
-- React Markdown
-- Vercel
+This project extends the architecture into a production-oriented multimodal platform capable of:
 
-### Backend
-
-- FastAPI
-- Python
-- PyMuPDF
-- OpenRouter
-- Qwen 2.5 VL
-- Clerk JWT validation
-
-### Deployment
-
-- Vercel
-- Docker
-- AWS ECR
-- AWS Lambda Container Images
-- AWS Lambda Web Adapter
-- Lambda Function URL
+* Processing PDFs and images
+* Extracting OCR text
+* Understanding embedded figures and diagrams
+* Converting documents into structured Markdown
+* Performing hybrid retrieval
+* Supporting secure multi-user environments
+* Running on cloud-native infrastructure
 
 ---
 
-## Demo
+# Key Features
 
-![NoteVision Home](docs/homepage.png)
+## Document Ingestion
+
+* PDF Upload
+* Image Upload
+* OCR Extraction
+* Metadata Extraction
+* Markdown Generation
+* Document Storage
+
+## Multimodal Understanding
+
+* OCR for scanned PDFs
+* Image Caption Generation
+* Visual Content Processing
+* Markdown-based document representation
+
+## Retrieval Pipeline
+
+* Semantic Search
+* Vector Retrieval
+* Metadata Filtering
+* Project-Level Isolation
+* Hybrid Retrieval
+* Reciprocal Rank Fusion (RRF)
+
+## Authentication & Security
+
+* Clerk Authentication
+* JWT Validation
+* User Isolation
+* Project Isolation
+* Upload Validation
+* Secure Cloud Storage
+
+## Production Infrastructure
+
+* Dockerized Deployment
+* AWS Lambda Containers
+* AWS ECR
+* Amazon S3
+* PostgreSQL Metadata Layer
+* Qdrant Vector Database
+* Health Monitoring Endpoints
 
 ---
 
-## Architecture
+# System Architecture
 
-```txt
+```text
 User
-  ↓
+ │
+ ▼
 Next.js Frontend
-  ↓
-FastAPI Backend
-  ↓
+ │
+ ▼
 Clerk Authentication
-  ↓
-OpenRouter Vision Model
-  ↓
-Streaming OCR Output
-```
-
-## Application Architecture
-
-![Architecture](docs/architecture.png)
-
----
-
-## Deployment Evolution
-
-### Phase 1: Vercel Deployment
-
-```txt
-User
-  ↓
-Vercel
-  ↓
-Next.js Frontend
-  ↓
-FastAPI API Route / Backend
-  ↓
-OpenRouter Vision Model
-```
-
-The first working version used Vercel for the frontend and API routing. This helped validate the MVP quickly with authentication, subscription gating, OCR upload, and streaming text output.
-
-### Phase 2: Dockerized Full-Stack App
-
-```txt
-User
-  ↓
-Docker Container
-  ↓
-FastAPI
-  ├── Serves exported Next.js static frontend
-  └── Handles /api OCR requests
-  ↓
-OpenRouter Qwen Vision Model
-```
-
-The app was later converted into a single Docker image where FastAPI serves both the static Next.js frontend and the OCR backend.
-
-### Phase 3: AWS Lambda Container Deployment
-
-```txt
-User
-  ↓
-Lambda Function URL
-  ↓
-AWS Lambda Container
-  ↓
+ │
+ ▼
 FastAPI Backend
-  ↓
-OpenRouter Vision Model
-  ↓
-Streaming OCR Output
-```
-
-The current deployment runs as a containerized AWS Lambda function using Lambda Web Adapter and Function URL response streaming.
-
----
-
-## Local Development
-
-### Build Docker Image
-
-```bash
-docker build \
-  --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" \
-  -t notevision-ai .
-```
-
-### Run Docker Container
-
-```bash
-docker run --rm -p 8000:8000 \
-  -e CLERK_SECRET_KEY="$CLERK_SECRET_KEY" \
-  -e CLERK_JWKS_URL="$CLERK_JWKS_URL" \
-  -e OPEN_ROUTER_API_KEY="$OPEN_ROUTER_API_KEY" \
-  notevision-ai
-```
-
-### Open Application
-
-```txt
-http://localhost:8000
-```
-
-### Health Check
-
-```bash
-curl http://localhost:8000/health
-```
-
----
-
-## Vercel Deployment
-
-The first frontend deployment was done using Vercel.
-
-```txt
-Frontend:
-Next.js + TypeScript + Tailwind CSS
-
-Authentication:
-Clerk
-
-AI Backend:
-FastAPI + OpenRouter
-```
-
-The Vercel version was useful for validating:
-
-- Landing page
-- Clerk login
-- Subscription gating
-- Upload UI
-- OCR streaming output
-- Initial SaaS user flow
-
----
-
-## AWS Deployment
-
-### Build Docker Image
-
-```bash
-docker build \
-  --platform linux/amd64 \
-  --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" \
-  -t notevision-ai .
-```
-
-### Login to ECR
-
-```bash
-aws ecr get-login-password --region $DEFAULT_AWS_REGION | \
-docker login --username AWS --password-stdin \
-$AWS_ACCOUNT_ID.dkr.ecr.$DEFAULT_AWS_REGION.amazonaws.com
-```
-
-### Tag Image
-
-```bash
-docker tag notevision-ai:latest \
-$AWS_ACCOUNT_ID.dkr.ecr.$DEFAULT_AWS_REGION.amazonaws.com/notevision-ai:latest
-```
-
-### Push Image
-
-```bash
-docker push \
-$AWS_ACCOUNT_ID.dkr.ecr.$DEFAULT_AWS_REGION.amazonaws.com/notevision-ai:latest
-```
-
-### Lambda Environment Variables
-
-```txt
-CLERK_SECRET_KEY
-CLERK_JWKS_URL
-OPEN_ROUTER_API_KEY
-MAX_PDF_PAGES=10
-```
-
-### Lambda Function URL Settings
-
-```txt
-Auth Type:
-NONE
-
-Invoke Mode:
-RESPONSE_STREAM
-```
-
----
-
-## Current Status
-
-### Completed
-
-- Next.js Frontend
-- Vercel frontend deployment
-- Clerk Authentication
-- Subscription Gating
-- FastAPI Backend
-- PDF OCR
-- Image OCR
-- OpenRouter Integration
-- Dockerized Application
-- AWS ECR Deployment
-- AWS Lambda Deployment
-- Lambda Function URL
-- Response Streaming
-
-### Working End-to-End
-
-```txt
-User Upload
-    ↓
-FastAPI
-    ↓
-OpenRouter Vision Model
-    ↓
-Streaming OCR Output
-```
-
----
-
-## Known Limitation
-
-AWS Lambda Function URLs currently enforce a payload limit of approximately 6 MB.
-
-Large PDF uploads may fail with:
-
-```txt
-Request payload is too large
-```
-
-### Future Production Architecture
-
-```txt
-Frontend
-    ↓
-Presigned S3 Upload
-    ↓
-S3 Storage
-    ↓
-Lambda
-    ↓
-OCR Processing
-    ↓
+ │
+ ├── OCR Pipeline
+ ├── Image Processing Pipeline
+ ├── Retrieval Pipeline
+ └── LLM Pipeline
+ │
+ ├── PostgreSQL
+ ├── Qdrant
+ └── Amazon S3
+ │
+ ▼
 Streaming Response
 ```
 
-This architecture removes Lambda request-size limitations and supports large PDFs.
+---
+
+# Document Processing Pipeline
+
+```text
+Document Upload
+        │
+        ▼
+OCR Extraction
+        │
+        ▼
+Image Processing
+        │
+        ▼
+Markdown Generation
+        │
+        ▼
+Chunking
+        │
+        ▼
+Embedding Generation
+        │
+        ▼
+Qdrant Storage
+```
 
 ---
 
-## Roadmap
+# Retrieval Pipeline
 
-- S3-based uploads
-- OCR history
-- PDF export
-- TXT export
-- AI summaries
-- Flashcard generation
-- Quiz generation
-- User dashboard
-- Usage analytics
-- Stripe integration
+```text
+User Question
+        │
+        ▼
+Query Processing
+        │
+        ▼
+Vector Retrieval
+        │
+        ▼
+Metadata Filtering
+        │
+        ▼
+Hybrid Search
+        │
+        ▼
+RRF Fusion
+        │
+        ▼
+Context Assembly
+        │
+        ▼
+LLM Response Generation
+        │
+        ▼
+Streaming Answer
+```
 
 ---
 
-## Author
+# Technology Stack
 
-Deepak Lingaraju
+## Frontend
 
-M.Sc. Mechatronics  
+* Next.js 15
+* React
+* TypeScript
+* Tailwind CSS
+* Clerk Authentication
+* Vercel
+
+## Backend
+
+* FastAPI
+* Python 3.13
+* SQLAlchemy
+* PyMuPDF
+* OCR Pipeline
+
+## AI / RAG
+
+* OpenRouter
+* Embedding Models
+* Hybrid Retrieval
+* Reciprocal Rank Fusion (RRF)
+* Markdown Chunking
+
+## Data Layer
+
+* PostgreSQL (Neon)
+* Qdrant Vector Database
+* Amazon S3
+
+## Infrastructure
+
+* Docker
+* AWS Lambda
+* AWS ECR
+* Lambda Web Adapter
+* Vercel
+
+---
+
+# Production Hardening
+
+Implemented production-oriented improvements:
+
+## Container Security
+
+* Docker Base Image Updates
+* Vulnerability Remediation
+* Reduced Attack Surface
+
+## Upload Safety
+
+* PDF Size Limits
+* Image Size Limits
+* File Type Validation
+* Content Type Validation
+
+## Health Monitoring
+
+```text
+/health
+/health/db
+/health/qdrant
+/health/s3
+```
+
+Verified Health Checks:
+
+* API Status
+* Database Connectivity
+* Vector Database Connectivity
+* S3 Connectivity
+
+---
+
+# Current MVP Status
+
+## Completed
+
+### Core Platform
+
+* User Authentication
+* Multi-Project Support
+* Document Upload
+* OCR Pipeline
+* Image Understanding
+* Markdown Conversion
+* Chunking Pipeline
+* Vector Storage
+* Hybrid Retrieval
+* Streaming Responses
+
+### Cloud Deployment
+
+* Docker Containerization
+* AWS ECR
+* AWS Lambda
+* Amazon S3
+* Neon PostgreSQL
+* Qdrant
+
+### Production Readiness
+
+* Upload Validation
+* Health Monitoring
+* Container Security
+* JWT Authentication
+* User Isolation
+
+---
+
+# Release History
+
+## v1.0.0 — Production-Hardened MVP
+
+### Features
+
+* PDF Upload
+* Image Upload
+* OCR Processing
+* Image Caption Processing
+* Markdown Conversion
+* Chunking Pipeline
+* Qdrant Integration
+* PostgreSQL Integration
+* S3 Storage
+* Streaming Responses
+* AWS Deployment
+* Health Monitoring
+* Upload Validation
+
+---
+
+# Planned Roadmap
+
+## v1.1.0 — Retrieval Inspector
+
+Visualize:
+
+* Retrieved Chunks
+* Chunk Ranking
+* Vector Scores
+* RRF Scores
+* Final Context
+
+---
+
+## v1.2.0 — Evaluation Dashboard
+
+Metrics:
+
+* Recall@K
+* Precision@K
+* MRR
+* nDCG
+* Faithfulness
+* Answer Relevance
+* Context Relevance
+* LLM-as-a-Judge
+
+---
+
+## v1.3.0 — Retrieval Quality
+
+* Cross Encoder Reranking
+* Improved Hybrid Search
+* Query Rewriting
+
+---
+
+## v2.0.0 — Visual RAG
+
+* Figure Retrieval
+* Table Retrieval
+* Diagram Understanding
+* Visual Citations
+
+---
+
+## v3.0.0 — Agentic RAG
+
+* Router Agent
+* Verification Agent
+* Retrieval Agents
+* Tool-Based Reasoning
+
+---
+
+# Why This Project Matters
+
+Most publicly available RAG projects stop at:
+
+```text
+Document
+   ↓
+Embedding
+   ↓
+Vector Search
+   ↓
+Answer
+```
+
+This project extends the architecture into a production-oriented multimodal system:
+
+```text
+PDF / Image
+      ↓
+OCR + Visual Understanding
+      ↓
+Markdown Conversion
+      ↓
+Chunking
+      ↓
+Hybrid Retrieval
+      ↓
+Metadata Filtering
+      ↓
+Cloud Infrastructure
+      ↓
+Streaming Answer
+```
+
+The objective is to demonstrate how modern enterprise-grade Retrieval-Augmented Generation systems can be designed, deployed, monitored, and scaled in real-world environments.
+
+---
+
+# Future Infrastructure Improvements
+
+* GitHub Actions CI/CD
+* Terraform Infrastructure as Code
+* CloudWatch Monitoring
+* Automated Deployments
+* S3 Presigned Uploads
+* Multi-Tenant Access Controls
+
+---
+
+# Author
+
+**Deepak Lingaraju**
+
+M.Sc. Mechatronics
 University of Duisburg-Essen
 
-AI • Computer Vision • LLM Applications • Cloud Deployment
+Machine Learning • Computer Vision • Multimodal AI • Retrieval-Augmented Generation • Cloud Engineering
