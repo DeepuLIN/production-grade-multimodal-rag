@@ -193,11 +193,13 @@ Streaming Answer
 
 ## AI / RAG
 
-* ![OpenRouter](https://img.shields.io/badge/-OpenRouter-black?style=flat-square) OpenRouter
-* ![Embeddings](https://img.shields.io/badge/-Embeddings-blue?style=flat-square) Embedding Models
-* ![Hybrid Retrieval](https://img.shields.io/badge/-Hybrid_Retrieval-green?style=flat-square) Hybrid Retrieval
-* ![RRF](https://img.shields.io/badge/-RRF-orange?style=flat-square) Reciprocal Rank Fusion (RRF)
-* ![Markdown](https://img.shields.io/badge/-Markdown-000000?logo=markdown&style=flat-square) Markdown Chunking
+* ![OpenRouter](https://img.shields.io/badge/-OpenRouter-black?style=flat-square) LLM Gateway
+* ![Amazon Bedrock](https://img.shields.io/badge/-Amazon_Bedrock-FF9900?logo=amazonaws&style=flat-square) Embedding Infrastructure
+* ![Titan](https://img.shields.io/badge/-Titan_Text_Embeddings-FF9900?logo=amazonaws&style=flat-square) Vector Embeddings
+* ![Hybrid Retrieval](https://img.shields.io/badge/-Hybrid_Retrieval-green?style=flat-square) Hybrid Search
+* ![RRF](https://img.shields.io/badge/-RRF-orange?style=flat-square) Reciprocal Rank Fusion
+* ![Markdown](https://img.shields.io/badge/-Markdown_Chunking-black?logo=markdown&style=flat-square) Context-Aware Chunking
+* ![OCR](https://img.shields.io/badge/-Diagram_Aware_OCR-blue?style=flat-square) Multimodal Extraction
 
 ## Data Layer
 

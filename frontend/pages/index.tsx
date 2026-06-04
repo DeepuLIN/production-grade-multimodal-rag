@@ -5,27 +5,27 @@ import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="container mx-auto px-4 py-12">
-        <nav className="flex justify-between items-center mb-12">
-          <h1 className="text-2xl font-bold text-slate-800">
-            Multimodal Rag
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white">
+      <div className="container mx-auto px-4 py-10">
+        <nav className="flex justify-between items-center mb-20">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Multimodal RAG Platform
           </h1>
 
           <div>
             <SignedOut>
               <SignInButton mode="modal">
-                <button className="bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 px-6 rounded-xl transition-all shadow-sm">
+                <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-xl transition-all shadow-lg shadow-blue-900/30">
                   Sign In
                 </button>
               </SignInButton>
             </SignedOut>
 
             <SignedIn>
-              <div className="flex items-center gap-4 bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-4 bg-white/10 backdrop-blur rounded-xl px-3 py-2 border border-white/10 shadow-sm">
                 <Link
                   href="/product"
-                  className="bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 px-6 rounded-xl transition-all shadow-sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-xl transition-all shadow-lg shadow-blue-900/30"
                 >
                   Go to App
                 </Link>
@@ -36,52 +36,85 @@ export default function Home() {
           </div>
         </nav>
 
-        <div className="text-center py-24">
-          <h2 className="text-6xl font-bold text-slate-800 mb-6">
-            Transform Handwritten Notes
+        <section className="text-center py-20">
+          <div className="inline-flex items-center rounded-full border border-blue-400/30 bg-blue-500/10 px-4 py-2 text-sm text-blue-200 mb-8">
+            AWS deployed • OCR • Hybrid retrieval • Multimodal RAG
+          </div>
+
+          <h2 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+            Production-Grade
             <br />
-            Into Digital Text
+            <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">
+              Multimodal RAG Platform
+            </span>
           </h2>
 
-          <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
-            Upload handwritten notes, lecture pages, meeting notes, or study
-            material and convert them into clean, editable digital text using AI.
+          <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed">
+            Ingest PDFs, scanned documents, images, diagrams, and technical
+            content into secure AI-powered knowledge bases using OCR, visual
+            extraction, hybrid retrieval, vector search, and streaming LLM
+            responses.
           </p>
 
-          <div className="bg-white border border-slate-200 rounded-3xl shadow-xl p-8 max-w-sm mx-auto mb-10">
-            <h3 className="text-2xl font-bold mb-3 text-slate-800">
-              Premium Subscription
-            </h3>
+          <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto mb-12">
+            <div className="bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-6 text-left">
+              <h3 className="text-xl font-semibold mb-3">Document Intelligence</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Upload PDFs and images, extract OCR text, capture visual labels,
+                and transform documents into Markdown-based RAG chunks.
+              </p>
+            </div>
 
-            <p className="text-5xl font-bold text-slate-800 mb-3">
-              $8
-              <span className="text-lg text-slate-500">/month</span>
-            </p>
+            <div className="bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-6 text-left">
+              <h3 className="text-xl font-semibold mb-3">Hybrid Retrieval</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Combine semantic vector search, metadata filtering, project
+                isolation, and retrieval fusion for grounded answers.
+              </p>
+            </div>
 
-            <ul className="text-left text-slate-600 space-y-2 mb-6">
-              <li>✓ Unlimited note digitization</li>
-              <li>✓ AI-powered handwritten OCR</li>
-              <li>✓ Clean editable digital text</li>
-              <li>✓ Future summaries and flashcards</li>
-            </ul>
+            <div className="bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-6 text-left">
+              <h3 className="text-xl font-semibold mb-3">Cloud Architecture</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Built with FastAPI, AWS Lambda, S3, Qdrant, PostgreSQL, Clerk,
+                Docker, and Vercel.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 border border-white/10 rounded-3xl shadow-2xl p-8 max-w-3xl mx-auto mb-10">
+            <h3 className="text-2xl font-bold mb-5">Core Capabilities</h3>
+
+            <div className="grid md:grid-cols-2 gap-3 text-left text-slate-300">
+              <p>✓ PDF & image ingestion</p>
+              <p>✓ OCR and visual extraction</p>
+              <p>✓ Project-based document isolation</p>
+              <p>✓ Qdrant vector database</p>
+              <p>✓ PostgreSQL metadata layer</p>
+              <p>✓ Amazon S3 document storage</p>
+              <p>✓ Health monitoring endpoints</p>
+              <p>✓ Secure upload validation</p>
+              <p>✓ Streaming AI responses</p>
+              <p>✓ AWS Lambda deployment</p>
+            </div>
           </div>
 
           <SignedOut>
             <SignInButton mode="modal">
-              <button className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-10 rounded-2xl text-lg transition-all duration-300 hover:scale-105 shadow-sm">
-                Start Converting Notes
+              <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-2xl text-lg transition-all duration-300 hover:scale-105 shadow-lg shadow-blue-900/40">
+                Explore Platform
               </button>
             </SignInButton>
           </SignedOut>
 
           <SignedIn>
             <Link href="/product">
-              <button className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-10 rounded-2xl text-lg transition-all duration-300 hover:scale-105 shadow-sm">
-                Access NoteVision AI
+              <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-2xl text-lg transition-all duration-300 hover:scale-105 shadow-lg shadow-blue-900/40">
+                Launch Application
               </button>
             </Link>
           </SignedIn>
-        </div>
+        </section>
       </div>
     </main>
   );
