@@ -1,12 +1,97 @@
+# Node / Next.js
+
 node_modules
 .next
-.env
-.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+
+**pycache**
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+
+# Virtual Environments
+
+.venv
+venv
+env
+
+# Git
+
 .git
 .gitignore
-README.md
-.DS_Store
-*.log
+
+# Environment Variables
+
+.env
+.env.*
+!.env.example
+
+# Vercel
+
 .vercel
+
+# Build Outputs
+
 dist
 build
+
+# IDE
+
+.vscode
+.idea
+
+# OS Files
+
+.DS_Store
+Thumbs.db
+
+# Logs
+
+*.log
+
+# Data / Uploads
+
+data
+uploads
+storage
+ocr_output
+documents
+
+# Local Databases
+
+*.db
+*.sqlite
+*.sqlite3
+
+# Qdrant
+
+qdrant_storage
+
+# Models
+
+models
+checkpoints
+
+# Large Files
+
+*.pdf
+*.zip
+*.tar
+*.gz
+
+# Terraform
+
+.terraform
+terraform.tfstate
+terraform.tfstate.*
+*.tfvars
+
+# AWS
+
+.aws
