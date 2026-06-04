@@ -348,10 +348,49 @@ Metrics:
 
 ## v2.0.0 — Visual RAG
 
-* Figure Retrieval
-* Table Retrieval
-* Diagram Understanding
-* Visual Citations
+Goal: extend the current image-caption pipeline into true visual retrieval, where figures, diagrams, charts, and tables inside PDFs/images are extracted, indexed, and retrievable as first-class knowledge units.
+
+Planned capabilities:
+
+* Extract figures, diagrams, charts, and tables from PDFs/images
+* Detect the surrounding section or paragraph where each visual element appears
+* Generate visual captions and structured metadata for each extracted image region
+* Store visual chunks separately from text chunks
+* Link each visual chunk back to its source document, page, and surrounding text
+* Support visual retrieval for questions about figures, diagrams, charts, and tables
+* Add visual citations showing the source page and image region used in the answer
+
+Possible approach:
+
+```text
+PDF / Image
+    ↓
+Page Rendering
+    ↓
+Visual Region Detection
+    ↓
+Figure / Table / Diagram Extraction
+    ↓
+Vision Model Captioning
+    ↓
+Visual Metadata Generation
+    ↓
+Visual Chunk Creation
+    ↓
+Embedding + Vector Storage
+    ↓
+Visual Retrieval
+    ↓
+Answer with Visual Citations
+```
+
+Research direction:
+
+* Use multimodal models to identify and describe figures, diagrams, charts, and tables
+* Explore image patching or region-based visual chunking inspired by Vision Transformer-style processing
+* Combine visual chunks with nearby text chunks for better context-aware retrieval
+* Evaluate whether visual embeddings, text captions, or hybrid image-text retrieval gives the best result
+
 
 ---
 

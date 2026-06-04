@@ -26,10 +26,11 @@ async def extract_text_from_upload(file: UploadFile) -> str:
             "type": "text",
             "text": (
                "Extract all visible text from this file. "
-                "Preserve headings, paragraphs, equations, tables, and figure labels. "
-                "If there are figures, diagrams, charts, or images, extract any visible text, labels, legends, captions, and axis names. "
-                "Do not summarize or explain the figure. "
-                "Return only the extracted text."
+                "Preserve headings, paragraphs, equations, tables, figure labels, captions, legends, and axis names. "
+                "If there are figures, diagrams, charts, or flowcharts, extract both the visible text and the visual structure. "
+                "For diagrams, list nodes/boxes, arrows, relationships, and error labels if visible. "
+                "Do not invent missing text. "
+                "Return the result in clear Markdown."
             ),
         }
     ]
@@ -79,10 +80,12 @@ async def extract_text_from_upload(file: UploadFile) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are a high-accuracy OCR engine. Extract all visible text from images or PDF pages. "
+                    "You are a high-accuracy OCR and document-structure extraction engine. "
+                    "Extract visible text from images or PDF pages. "
                     "Preserve reading order, headings, bullet points, equations, symbols, and line breaks. "
-                    "Do not summarize. Do not explain. Do not add missing text. "
-                    "If the image contains diagrams, extract labels and nearby text clearly."
+                    "If the image contains diagrams or flowcharts, extract labels, boxes/nodes, arrows, and relationships. "
+                    "Do not hallucinate missing text. "
+                    "Return structured Markdown."
                 ),
             },
             {

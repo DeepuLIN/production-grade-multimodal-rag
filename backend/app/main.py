@@ -32,9 +32,10 @@ allow_all_origins = cors_origins_raw.strip() == "*"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://project-bs0el.vercel.app",
         "http://localhost:3000",
+        "https://project-bs0el.vercel.app",
     ],
+    allow_origin_regex=r"https://multimodal-rag-[a-z0-9]+-deepu-li-n-s-projects\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
