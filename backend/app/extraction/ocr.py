@@ -1,9 +1,7 @@
 import base64
 import fitz
 
-from fastapi import UploadFile
 from openai import OpenAI
-from app.rag.chunker import chunk_text
 from app.core.config import (
     MAX_PDF_PAGES,
     OCR_MODEL,
@@ -11,31 +9,37 @@ from app.core.config import (
     OPEN_ROUTER_BASE_URL,
 )
 
+from app.rag.math_normalizer import normalize_math
 
-async def extract_text_from_upload(file: UploadFile) -> str:
+
+async def extract_text_from_bytes(
+    file_bytes: bytes,
+    filename: str,
+    content_type: str,
+) -> str:
+
     if not OPEN_ROUTER_API_KEY:
         raise RuntimeError("OPEN_ROUTER_API_KEY is missing")
 
-    file_bytes = await file.read()
-
     if not file_bytes:
-        raise ValueError("No file uploaded")
+        raise ValueError("No file bytes provided")
 
     content_items = [
         {
             "type": "text",
             "text": (
-               "Extract all visible text from this file. "
-                "Preserve headings, paragraphs, equations, tables, figure labels, captions, legends, and axis names. "
-                "If there are figures, diagrams, charts, or flowcharts, extract both the visible text and the visual structure. "
-                "For diagrams, list nodes/boxes, arrows, relationships, and error labels if visible. "
-                "Do not invent missing text. "
-                "Return the result in clear Markdown."
+                "Extract all visible text.\n"
+                "IMPORTANT:\n"
+                "- Convert ALL math into LaTeX ($...$ or $$...$$)\n"
+                "- Never use square brackets for equations\n"
+                "- Preserve structure (tables, headings, diagrams)\n"
+                "- Output clean Markdown only\n"
             ),
         }
     ]
 
-    if file.content_type == "application/pdf":
+    # PDF handling
+    if content_type == "application/pdf" or filename.lower().endswith(".pdf"):
         pdf = fitz.open(stream=file_bytes, filetype="pdf")
 
         for page_index, page in enumerate(pdf):
@@ -46,25 +50,30 @@ async def extract_text_from_upload(file: UploadFile) -> str:
             image_bytes = pix.tobytes("png")
             image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
-            content_items.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/png;base64,{image_base64}"
-                },
-            })
+            content_items.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{image_base64}"
+                    },
+                }
+            )
 
         pdf.close()
 
+    # image handling
     else:
-        content_type = file.content_type or "image/jpeg"
+        safe_content_type = content_type or "image/jpeg"
         image_base64 = base64.b64encode(file_bytes).decode("utf-8")
 
-        content_items.append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:{content_type};base64,{image_base64}"
-            },
-        })
+        content_items.append(
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{safe_content_type};base64,{image_base64}"
+                },
+            }
+        )
 
     client = OpenAI(
         api_key=OPEN_ROUTER_API_KEY,
@@ -80,12 +89,12 @@ async def extract_text_from_upload(file: UploadFile) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are a high-accuracy OCR and document-structure extraction engine. "
-                    "Extract visible text from images or PDF pages. "
-                    "Preserve reading order, headings, bullet points, equations, symbols, and line breaks. "
-                    "If the image contains diagrams or flowcharts, extract labels, boxes/nodes, arrows, and relationships. "
-                    "Do not hallucinate missing text. "
-                    "Return structured Markdown."
+                    "You are a high-accuracy OCR engine.\n"
+                    "STRICT RULES:\n"
+                    "- NEVER output equations in [ ]\n"
+                    "- ALWAYS use LaTeX\n"
+                    "- Preserve reading order\n"
+                    "- Output structured Markdown only\n"
                 ),
             },
             {
@@ -95,4 +104,9 @@ async def extract_text_from_upload(file: UploadFile) -> str:
         ],
     )
 
-    return response.choices[0].message.content or ""
+    output = response.choices[0].message.content or ""
+
+    # 🔥 FINAL NORMALIZATION
+    output = normalize_math(output)
+
+    return output

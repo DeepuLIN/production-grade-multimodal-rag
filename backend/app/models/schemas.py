@@ -37,6 +37,8 @@ class DocumentCreate(BaseModel):
     content_type: str | None = None
     s3_original_path: str | None = None
     s3_ocr_path: str | None = None
+    status: str = "processing"
+    error_message: str | None = None
 
 
 class DocumentOut(BaseModel):
@@ -47,6 +49,8 @@ class DocumentOut(BaseModel):
     content_type: str | None = None
     s3_original_path: str | None = None
     s3_ocr_path: str | None = None
+    status: str
+    error_message: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

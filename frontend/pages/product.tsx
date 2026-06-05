@@ -5,6 +5,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import { useAuth, Protect, PricingTable, UserButton } from "@clerk/nextjs";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
+
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -19,6 +23,8 @@ type DocumentItem = {
   filename: string;
   content_type?: string;
   created_at?: string;
+  status?: "processing" | "completed" | "failed";
+  error_message?: string | null;
 };
 
 type Match = {
@@ -67,7 +73,7 @@ function MultimodalRAGApp() {
   const [uploadStatus, setUploadStatus] = useState("");
   const [asking, setAsking] = useState(false);
   const [deletingId, setDeletingId] = useState("");
-
+  const [deletingProjectId, setDeletingProjectId] = useState("");
   async function authHeaders(json = false) {
     const jwt = await getToken();
     if (!jwt) throw new Error("Authentication required");
@@ -82,6 +88,7 @@ function MultimodalRAGApp() {
     setLoadingProjects(true);
     try {
       const headers = await authHeaders();
+
       const res = await fetch(`${API_BASE}/projects`, { headers });
       if (!res.ok) throw new Error(await res.text());
 
@@ -116,6 +123,40 @@ function MultimodalRAGApp() {
     } finally {
       setLoadingDocuments(false);
     }
+  }
+
+  async function pollDocumentStatus(documentId: string, projectId: string) {
+    const interval = setInterval(async () => {
+      try {
+        const headers = await authHeaders();
+
+        const res = await fetch(`${API_BASE}/documents/${documentId}/status`, {
+          headers,
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+
+        const data = await res.json();
+
+        if (data.status === "completed") {
+          clearInterval(interval);
+          setUploadStatus("Document indexed successfully.");
+          await loadDocuments(projectId);
+          setSelectedDocumentId(documentId);
+        }
+
+        if (data.status === "failed") {
+          clearInterval(interval);
+          setUploadStatus(
+            `Processing failed: ${data.error_message || "Unknown error"}`
+          );
+          await loadDocuments(projectId);
+        }
+      } catch (error) {
+        clearInterval(interval);
+        setUploadStatus(`Status check failed: ${String(error)}`);
+      }
+    }, 3000);
   }
 
   useEffect(() => {
@@ -159,11 +200,52 @@ function MultimodalRAGApp() {
     }
   }
 
+  async function handleDeleteProject(projectId: string) {
+    const project = projects.find((p) => p.id === projectId);
+    const projectName = project?.name || "this project";
+
+    const ok = window.confirm(
+      `Delete project "${projectName}" and all its documents from Postgres, Qdrant, and S3?`
+    );
+
+    if (!ok) return;
+
+    setDeletingProjectId(projectId);
+
+    try {
+      const headers = await authHeaders();
+
+      const res = await fetch(`${API_BASE}/projects/${projectId}`, {
+        method: "DELETE",
+        headers,
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      setSelectedDocumentId("all");
+      setExtractedText("");
+      setMatches([]);
+      setAnswer("");
+
+      const remainingProjects = projects.filter((p) => p.id !== projectId);
+      const nextProjectId = remainingProjects[0]?.id || "";
+
+      setSelectedProjectId(nextProjectId);
+
+      await loadProjects();
+      await loadDocuments(nextProjectId);
+    } catch (error) {
+      alert(`Delete project failed: ${String(error)}`);
+    } finally {
+      setDeletingProjectId("");
+    }
+  }
   async function uploadOneFile(file: File, index: number, total: number) {
     const headers = await authHeaders();
     const formData = new FormData();
 
     formData.append("file", file);
+
     if (selectedProjectId) {
       formData.append("project_id", selectedProjectId);
     }
@@ -197,36 +279,31 @@ function MultimodalRAGApp() {
 
       for (let i = 0; i < fileArray.length; i++) {
         lastData = await uploadOneFile(fileArray[i], i, fileArray.length);
+
         if (lastData?.document_id) {
           lastDocumentId = lastData.document_id;
         }
       }
 
-      // 🔥 CRITICAL FIX: auto-select latest uploaded doc
       if (lastDocumentId) {
         console.log("🔥 AUTO SELECTING NEW DOC:", lastDocumentId);
         setSelectedDocumentId(lastDocumentId);
       }
 
-      // UI update
       setExtractedText(
         lastData?.extracted_text ||
-        lastData?.cleaned_text ||
-        lastData?.ocr_text ||
-        lastData?.preview ||
-        ""
+          lastData?.cleaned_text ||
+          lastData?.ocr_text ||
+          lastData?.preview ||
+          ""
       );
 
-// refresh documents AFTER upload
-await loadDocuments(selectedProjectId);
-
-// safety re-sync
-if (lastDocumentId) {
-  setSelectedDocumentId(lastDocumentId);
-}
-
-      setUploadStatus(`Indexed ${fileArray.length} document(s).`);
+      setUploadStatus("Uploaded. Processing document...");
       await loadDocuments(selectedProjectId);
+
+      if (lastDocumentId) {
+        pollDocumentStatus(lastDocumentId, selectedProjectId);
+      }
     } catch (error) {
       setUploadStatus(`Upload failed: ${String(error)}`);
       setExtractedText(`Error: ${String(error)}`);
@@ -234,7 +311,6 @@ if (lastDocumentId) {
       setUploading(false);
     }
   }
- 
 
   async function handleDeleteDocument(documentId: string) {
     const ok = window.confirm("Delete this document from Postgres, Qdrant, and S3?");
@@ -267,11 +343,9 @@ if (lastDocumentId) {
   async function handleAsk() {
     if (!question.trim()) return;
 
-    const documentId =
-      selectedDocumentId === "all" ? null : selectedDocumentId;
+    const documentId = selectedDocumentId === "all" ? null : selectedDocumentId;
 
     console.log("🔥 FINAL ASK PAYLOAD DOC ID:", documentId);
-
     console.log("======== ASK DEBUG ========");
     console.log("question:", question);
     console.log("selectedProjectId:", selectedProjectId);
@@ -373,6 +447,18 @@ if (lastDocumentId) {
               ))
             )}
           </select>
+          
+
+          <button
+            title="Delete selected project and its documents"
+            onClick={() => handleDeleteProject(selectedProjectId)}
+            disabled={!selectedProjectId || deletingProjectId === selectedProjectId}
+            className="mb-4 mt-2 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+          >
+            {deletingProjectId === selectedProjectId
+              ? "Deleting project..."
+              : "Delete Selected Project"}
+          </button>
 
           <div className="mb-4 flex gap-2">
             <input
@@ -380,7 +466,7 @@ if (lastDocumentId) {
               value={newProjectName}
               onChange={(e) => setNewProjectName(e.target.value)}
               placeholder="New project"
-              className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-slate-200"
+              className="min-w-0 flex-1 rounded-2xl border border-indigo-300 bg-indigo-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-500 outline-none focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500"
             />
 
             <button
@@ -408,7 +494,7 @@ if (lastDocumentId) {
               htmlFor="multi-upload"
               className="block cursor-pointer rounded-2xl bg-slate-900 px-4 py-3 text-center text-sm font-bold text-white transition hover:scale-[1.01] hover:bg-black"
             >
-              {uploading ? "Indexing..." : "Upload & Index Documents"}
+              {uploading ? "Uploading..." : "Upload Documents"}
             </label>
 
             <p
@@ -473,9 +559,17 @@ if (lastDocumentId) {
                     <p className="truncate text-sm font-semibold text-slate-800">
                       {doc.filename}
                     </p>
+
                     <p className="truncate text-[11px] text-slate-400">
                       {doc.content_type || "document"}
+                      {doc.status ? ` · ${doc.status}` : ""}
                     </p>
+
+                    {doc.status === "failed" && doc.error_message ? (
+                      <p className="truncate text-[11px] text-red-500">
+                        {doc.error_message}
+                      </p>
+                    ) : null}
                   </button>
 
                   <button
@@ -509,7 +603,7 @@ if (lastDocumentId) {
                 Extracted Text
               </h2>
 
-              <div className="min-h-[28rem] max-h-[36rem] overflow-y-auto rounded-3xl border border-slate-200 bg-white/80 p-5 text-slate-700 shadow-inner whitespace-pre-wrap">
+              <div className="min-h-[28rem] max-h-[36rem] overflow-y-auto whitespace-pre-wrap rounded-3xl border border-slate-200 bg-white/80 p-5 text-slate-700 shadow-inner">
                 {extractedText ? (
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                     {extractedText}
@@ -555,8 +649,8 @@ if (lastDocumentId) {
                       title={selectedMatchObject.filename || selectedMatchObject.source}
                       className="mb-3 max-w-full truncate text-sm text-slate-500"
                     >
-                      Source: {selectedMatchObject.filename || selectedMatchObject.source}
-
+                      Source:{" "}
+                      {selectedMatchObject.filename || selectedMatchObject.source}
                       {selectedMatchObject.chunk_index !== undefined &&
                       selectedMatchObject.chunk_index !== null
                         ? ` · Chunk ${selectedMatchObject.chunk_index}`
@@ -615,10 +709,12 @@ if (lastDocumentId) {
                           className="mb-2 max-w-full truncate text-sm text-slate-500"
                         >
                           Source: {match.filename || match.source}
-                          {match.chunk_index !== undefined && match.chunk_index !== null
+                          {match.chunk_index !== undefined &&
+                          match.chunk_index !== null
                             ? ` · Chunk ${match.chunk_index}`
                             : ""}
                         </p>
+
                         <div className="mb-3 mt-2 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
                           <div className="rounded-xl bg-slate-100 px-3 py-2">
                             <p className="font-semibold text-slate-500">Vector</p>
@@ -710,9 +806,14 @@ if (lastDocumentId) {
 
               <div className="min-h-40 rounded-3xl border border-slate-200 bg-white/80 p-6 text-slate-700 shadow-inner">
                 {answer ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                    {answer}
-                  </ReactMarkdown>
+                  <div className="prose max-w-none prose-slate">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                    >
+                      {answer}
+                    </ReactMarkdown>
+                  </div>
                 ) : (
                   <p className="text-slate-400">
                     The streamed answer will appear here.

@@ -1,5 +1,4 @@
 from typing import List, Dict, Any
-
 from openai import OpenAI
 
 from app.core.config import (
@@ -8,17 +7,21 @@ from app.core.config import (
     OPEN_ROUTER_BASE_URL,
 )
 
+from app.rag.math_normalizer import normalize_math
+
 
 def generate_answer(question: str, contexts: List[Dict[str, Any]]) -> str:
     if not OPEN_ROUTER_API_KEY:
         raise RuntimeError("OPEN_ROUTER_API_KEY is missing")
 
+    # build context
     context_text = "\n\n".join(
-        [
-            f"Source {i + 1}:\n{item['text']}"
-            for i, item in enumerate(contexts)
-        ]
+        f"Source {i + 1}:\n{item['text']}"
+        for i, item in enumerate(contexts)
     )
+
+    # 🔥 normalize BEFORE LLM
+    context_text = normalize_math(context_text)
 
     client = OpenAI(
         api_key=OPEN_ROUTER_API_KEY,
@@ -33,19 +36,23 @@ def generate_answer(question: str, contexts: List[Dict[str, Any]]) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are a helpful document question-answering assistant. "
-                    "Answer only using the provided context. "
-                    "If the answer is not present in the context, say you do not know."
+                    "You are a precise document QA assistant.\n"
+                    "CRITICAL RULES:\n"
+                    "- NEVER output equations inside [ ]\n"
+                    "- Always use LaTeX: $...$ or $$...$$\n"
+                    "- Preserve math structure (fractions, matrices, symbols)\n"
                 ),
             },
             {
                 "role": "user",
-                "content": (
-                    f"Context:\n{context_text}\n\n"
-                    f"Question:\n{question}"
-                ),
+                "content": f"Context:\n{context_text}\n\nQuestion:\n{question}",
             },
         ],
     )
 
-    return response.choices[0].message.content or ""
+    output = response.choices[0].message.content or ""
+
+    # 🔥 FINAL SAFETY PASS
+    output = normalize_math(output)
+
+    return output

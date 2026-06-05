@@ -75,3 +75,6 @@ class BM25Index:
 
         results.sort(key=lambda x: x["bm25_score"], reverse=True)
         return results[:top_k]
+    
+
+bm25_index = BM25Index()

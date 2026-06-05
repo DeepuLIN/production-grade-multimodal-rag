@@ -1,7 +1,8 @@
 import uuid
 import os
 from typing import List, Dict, Any
-
+from app.rag.bm25 import bm25_index
+from app.rag.embeddings import embed_texts
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
@@ -15,7 +16,7 @@ from qdrant_client.models import (
 )
 
 from app.rag.embeddings import embed_texts
-from app.rag.bm25 import BM25Index
+
 
 
 QDRANT_COLLECTION = os.getenv(
@@ -27,7 +28,6 @@ BEDROCK_EMBEDDING_DIMENSION = int(
     os.getenv("BEDROCK_EMBEDDING_DIMENSION", "1024")
 )
 
-bm25_index = BM25Index()
 
 
 def get_qdrant_client():
@@ -342,7 +342,7 @@ def rebuild_bm25_from_qdrant(
             }
         )
 
-    bm25_index.build(bm25_items)
+    bm25_index.add(bm25_items)
 
     print("✅ Rebuilt BM25 from Qdrant")
     print("🔥 BM25 REBUILT ITEMS:", len(bm25_index.items))

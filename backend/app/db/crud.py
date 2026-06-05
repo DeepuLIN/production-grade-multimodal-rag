@@ -140,6 +140,31 @@ def update_document_storage(
     return document
 
 
+
+def update_document_status(
+    db: Session,
+    document_id: str,
+    status: str,
+    error_message: str | None = None,
+) -> models.Document | None:
+    document = (
+        db.query(models.Document)
+        .filter(models.Document.id == document_id)
+        .first()
+    )
+
+    if not document:
+        return None
+
+    document.status = status
+    document.error_message = error_message
+
+    db.commit()
+    db.refresh(document)
+
+    return document
+
+
 def get_user_documents(
     db: Session,
     user_id: str,
@@ -186,3 +211,38 @@ def delete_document_for_user(
     db.commit()
 
     return document
+
+
+def get_project_for_user(
+    db: Session,
+    user_id: str,
+    project_id: str,
+) -> models.Project | None:
+    return (
+        db.query(models.Project)
+        .filter(
+            models.Project.user_id == user_id,
+            models.Project.id == project_id,
+        )
+        .first()
+    )
+
+
+def delete_project_for_user(
+    db: Session,
+    user_id: str,
+    project_id: str,
+) -> models.Project | None:
+    project = get_project_for_user(
+        db=db,
+        user_id=user_id,
+        project_id=project_id,
+    )
+
+    if not project:
+        return None
+
+    db.delete(project)
+    db.commit()
+
+    return project

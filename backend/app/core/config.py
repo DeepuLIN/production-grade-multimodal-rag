@@ -30,7 +30,13 @@ S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 # -------------------------
 # HUGGINGFACE
 # -------------------------
-HF_TOKEN = os.getenv("HF_TOKEN")
+#HF_TOKEN = os.getenv("HF_TOKEN")
+
+
+# -------------------------
+# SQS
+# -------------------------
+SQS_QUEUE_URL = os.getenv("SQS_QUEUE_URL")
 
 # -------------------------
 # OPENROUTER

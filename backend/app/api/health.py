@@ -1,13 +1,13 @@
 import os
-import boto3
 from fastapi import APIRouter
 from sqlalchemy import text
-
-from app.db.database import engine
 
 router = APIRouter()
 
 
+# -------------------------------------------------
+# 🔥 BASIC HEALTH (USED BY LAMBDA READINESS CHECK)
+# -------------------------------------------------
 @router.get("/")
 @router.get("/api")
 @router.get("/health")
@@ -19,13 +19,23 @@ def health_check():
     }
 
 
+# -------------------------------------------------
+# 🔥 DB HEALTH (SAFE - NO IMPORT AT GLOBAL SCOPE)
+# -------------------------------------------------
 @router.get("/health/db")
 @router.get("/api/health/db")
 def health_db():
     try:
+        from app.db.database import engine  # IMPORT INSIDE (IMPORTANT FIX)
+
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        return {"status": "healthy", "service": "database"}
+
+        return {
+            "status": "healthy",
+            "service": "database",
+        }
+
     except Exception as e:
         return {
             "status": "unhealthy",
@@ -34,15 +44,23 @@ def health_db():
         }
 
 
+# -------------------------------------------------
+# 🔥 QDRANT HEALTH (LIGHTWEIGHT CHECK ONLY)
+# -------------------------------------------------
 @router.get("/health/qdrant")
 @router.get("/api/health/qdrant")
 def health_qdrant():
     try:
-        from app.rag.vector_store import search_chunks
+        from app.rag.vector_store import client  # assumes qdrant client exposed
 
-        search_chunks("health check", top_k=1)
+        # lightweight metadata call (NO embedding/search)
+        client.get_collections()
 
-        return {"status": "healthy", "service": "qdrant"}
+        return {
+            "status": "healthy",
+            "service": "qdrant",
+        }
+
     except Exception as e:
         return {
             "status": "unhealthy",
@@ -51,16 +69,21 @@ def health_qdrant():
         }
 
 
+# -------------------------------------------------
+# 🔥 S3 HEALTH (SAFE CHECK)
+# -------------------------------------------------
 @router.get("/health/s3")
 @router.get("/api/health/s3")
 def health_s3():
     try:
+        import boto3
+
         bucket_name = os.getenv("S3_BUCKET_NAME")
         if not bucket_name:
             return {
                 "status": "unhealthy",
                 "service": "s3",
-                "error": "S3_BUCKET_NAME is not configured",
+                "error": "S3_BUCKET_NAME not configured",
             }
 
         s3 = boto3.client("s3")
@@ -71,6 +94,7 @@ def health_s3():
             "service": "s3",
             "bucket": bucket_name,
         }
+
     except Exception as e:
         return {
             "status": "unhealthy",

@@ -32,10 +32,33 @@ def list_documents(
                 "content_type": document.content_type,
                 "s3_original_path": document.s3_original_path,
                 "s3_ocr_path": document.s3_ocr_path,
+                "status": document.status,
+                "error_message": document.error_message,
                 "created_at": document.created_at,
             }
             for document in documents
         ]
+    }
+
+@router.get("/{document_id}/status")
+def get_document_status(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    document = crud.get_document_for_user(
+        db=db,
+        user_id=current_user.id,
+        document_id=document_id,
+    )
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return {
+        "document_id": document.id,
+        "status": document.status,
+        "error_message": document.error_message,
     }
 
 
@@ -62,6 +85,8 @@ def get_document(
         "content_type": document.content_type,
         "s3_original_path": document.s3_original_path,
         "s3_ocr_path": document.s3_ocr_path,
+        "status": document.status,
+        "error_message": document.error_message,
         "created_at": document.created_at,
     }
 

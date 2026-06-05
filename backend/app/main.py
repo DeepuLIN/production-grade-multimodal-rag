@@ -29,21 +29,28 @@ cors_origins_raw = os.getenv(
 
 allow_all_origins = cors_origins_raw.strip() == "*"
 
+
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://project-bs0el.vercel.app",
+    "https://multimodal-rag-r8u1sx9op-deepu-li-n-s-projects.vercel.app",
+    "https://multimodal-rag-ai-deepulin-deepu-li-n-s-projects.vercel.app",
+    "https://multimodal-rag-ai-deepu-li-n-s-projects.vercel.app",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://project-bs0el.vercel.app",
-    ],
-    allow_origin_regex=r"https://multimodal-rag-[a-z0-9]+-deepu-li-n-s-projects\.vercel\.app",
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 # -------------------------
 # CREATE TABLES
 # -------------------------
-Base.metadata.create_all(bind=engine)
+
 
 
 @app.get("/")

@@ -143,6 +143,16 @@ class Document(Base):
         Text,
         nullable=True,
     )
+    status: Mapped[str] = mapped_column(
+        String,
+        default="processing",
+        nullable=False,
+    )
+
+    error_message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

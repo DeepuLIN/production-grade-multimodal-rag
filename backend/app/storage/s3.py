@@ -33,6 +33,19 @@ def upload_original_file(
     return key
 
 
+
+def download_s3_file(key: str) -> bytes:
+    if not key:
+        raise ValueError("S3 key is missing")
+
+    s3 = get_s3_client()
+
+    response = s3.get_object(
+        Bucket=S3_BUCKET_NAME,
+        Key=key,
+    )
+
+    return response["Body"].read()
 def upload_ocr_json(
     document_id: str,
     filename: str,
