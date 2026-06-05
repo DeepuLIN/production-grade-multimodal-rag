@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
-import { useAuth, Protect, PricingTable, UserButton } from "@clerk/nextjs";
+import { useAuth, useUser, UserButton } from "@clerk/nextjs";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const ALLOWED_DEMO_EMAILS = ["deepak.ai.projects@gmail.com"];
 
 type Project = {
   id: string;
@@ -49,6 +50,34 @@ type Match = {
 function shortName(name?: string, max = 44) {
   if (!name) return "Untitled document";
   return name.length > max ? `${name.slice(0, 22)}...${name.slice(-16)}` : name;
+}
+
+
+
+function normalizeMath(text: string) {
+  return text.replace(/\[\s*([\s\S]*?)\s*\]/g, (match, content) => {
+    const isMath =
+      content.includes("=") ||
+      content.includes("_") ||
+      content.includes("^") ||
+      content.includes("\\frac") ||
+      content.includes("\\sqrt") ||
+      content.includes("\\text") ||
+      content.includes("\\left") ||
+      content.includes("\\right");
+
+    const isSource =
+      content.includes("SOURCE") ||
+      content.includes("chunk") ||
+      content.includes(".pdf") ||
+      content.includes("|");
+
+    if (isMath && !isSource) {
+      return `\n\n$$\n${content.trim()}\n$$\n\n`;
+    }
+
+    return match;
+  });
 }
 
 function MultimodalRAGApp() {
@@ -811,7 +840,7 @@ function MultimodalRAGApp() {
                       remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
                       rehypePlugins={[rehypeKatex]}
                     >
-                      {answer}
+                      {normalizeMath(answer)}
                     </ReactMarkdown>
                   </div>
                 ) : (
@@ -829,6 +858,40 @@ function MultimodalRAGApp() {
 }
 
 export default function Product() {
+  const { user, isLoaded } = useUser();
+
+  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+
+  const isAllowedDemoUser =
+    !!userEmail && ALLOWED_DEMO_EMAILS.includes(userEmail);
+
+  if (!isLoaded) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+        <p className="text-sm text-slate-300">Loading demo access...</p>
+      </main>
+    );
+  }
+
+  if (!user || !isAllowedDemoUser) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
+        <div className="max-w-md rounded-3xl border border-red-400/30 bg-red-500/10 p-8 text-center shadow-2xl">
+          <h1 className="mb-3 text-2xl font-bold text-red-100">
+            Private Recruiter Demo
+          </h1>
+
+          <p className="mb-6 text-sm leading-relaxed text-slate-300">
+            This application is restricted. Please use the provided recruiter
+            demo account to access the platform.
+          </p>
+
+          <UserButton showName={true} />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-50">
       <div
@@ -838,29 +901,7 @@ export default function Product() {
         <UserButton showName={true} />
       </div>
 
-      <Protect
-        plan="premium_subscription"
-        fallback={
-          <div className="container mx-auto px-4 py-12">
-            <header className="mb-12 text-center">
-              <h1 className="mb-4 text-5xl font-bold text-slate-900">
-                Multimodal RAG Premium
-              </h1>
-
-              <p className="mb-8 text-lg text-slate-600">
-                Upload documents, retrieve relevant chunks, and ask grounded
-                questions using AI.
-              </p>
-            </header>
-
-            <div className="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white p-6 shadow-xl">
-              <PricingTable />
-            </div>
-          </div>
-        }
-      >
-        <MultimodalRAGApp />
-      </Protect>
+      <MultimodalRAGApp />
     </main>
   );
 }

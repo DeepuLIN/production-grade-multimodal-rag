@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from openai import OpenAI
 import os
 import json
-
+from app.rag.math_normalizer import normalize_math
 from app.rag.vector_store import search_chunks
 from app.core.config import CHAT_MODEL
 from app.auth.clerk import get_current_user
@@ -325,6 +325,7 @@ def ask(
         )
 
         answer = response.choices[0].message.content or ""
+        answer = normalize_math(answer)
 
         return AskResponse(
             query=user_query,
