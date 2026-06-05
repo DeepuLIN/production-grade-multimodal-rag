@@ -13,7 +13,7 @@
 ![Clerk](https://img.shields.io/badge/Auth-Clerk-purple)
 ![OpenRouter](https://img.shields.io/badge/LLM-OpenRouter-black)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Status](https://img.shields.io/badge/Status-MVP%20Complete-success)
+![Status](https://img.shields.io/badge/Status-Production%20MVP-success)
 
 A production-grade multimodal Retrieval-Augmented Generation (RAG) platform designed for intelligent document understanding, knowledge retrieval, and question answering across PDFs, scanned documents, images, and mixed-content files.
 
@@ -58,11 +58,13 @@ This project extends the architecture into a production-oriented multimodal plat
 ## Retrieval Pipeline
 
 * Semantic Search
-* Vector Retrieval
-* Metadata Filtering
-* Project-Level Isolation
+* BM25 Keyword Search
 * Hybrid Retrieval
 * Reciprocal Rank Fusion (RRF)
+* Query Rewriting
+* Metadata Filtering
+* Project-Level Isolation
+* Retrieval Inspector
 
 ## Authentication & Security
 
@@ -97,77 +99,54 @@ Next.js Frontend
 Clerk Authentication
  │
  ▼
-FastAPI Backend
+FastAPI Backend (AWS Lambda Container)
  │
- ├── OCR Pipeline
- ├── Image Processing Pipeline
- ├── Retrieval Pipeline
- └── LLM Pipeline
- │
- ├── PostgreSQL
- ├── Qdrant
- └── Amazon S3
- │
- ▼
-Streaming Response
-```
-
----
-
-# Document Processing Pipeline
-
-```text
-Document Upload
-        │
-        ▼
-OCR Extraction
-        │
-        ▼
-Image Processing
-        │
-        ▼
-Markdown Generation
-        │
-        ▼
-Chunking
-        │
-        ▼
-Embedding Generation
-        │
-        ▼
-Qdrant Storage
-```
-
----
-
-# Retrieval Pipeline
-
-```text
-User Question
-        │
-        ▼
-Query Processing
-        │
-        ▼
-Vector Retrieval
-        │
-        ▼
-Metadata Filtering
-        │
-        ▼
-Hybrid Search
-        │
-        ▼
-RRF Fusion
-        │
-        ▼
-Context Assembly
-        │
-        ▼
-LLM Response Generation
-        │
-        ▼
-Streaming Answer
+ ├─────────────────────────────────────────────┐
+ │                                             │
+ ▼                                             ▼
+PostgreSQL (metadata)                     Amazon S3 (raw files)
+ │                                             │
+ │                                             ▼
+ │                                    Large Document Storage
+ │                                    (5+ pages handled here)
+ │                                             │
+ │                                             ▼
+ │                              OCR Worker / Processing Pipeline
+ │                              (Lambda-compatible async flow)
+ │                                             │
+ └──────────────────────────────┬──────────────┘
+                                │
+                                ▼
+                     Document Processing Pipeline
+                                │
+     ┌──────────────────────────┼──────────────────────────┐
+     ▼                          ▼                          ▼
+ OCR Extraction         Image Processing         Markdown Builder
+                                │
+                                ▼
+                           Chunking Layer
+                                │
+                                ▼
+                ┌──────────────────────────────┐
+                │                              │
+                ▼                              ▼
+        Qdrant (Vectors)       BM25 Index
+                                (in-memory,
+                         rebuilt from Qdrant on
+                            Lambda cold start)
+                │                              │
+                └──────────────┬───────────────┘
+                               ▼
+                      Hybrid Retrieval (RRF)
+                               │
+                               ▼
+                     Context Assembly Layer
+                               │
+                               ▼
+                 LLM Generation (OpenRouter)
+                               │
+                               ▼
+                  Streaming Response to UI
 ```
 
 ---
@@ -284,7 +263,9 @@ Verified Health Checks:
 * BM25 Score Display
 * RRF Score Display
 * Retrieval Ranking Transparency
-* Automatic BM25 Rebuild from Qdrant after Lambda cold starts
+* Query Rewriting Visibility
+* Automatic BM25 Rebuild from Qdrant after Lambda Cold Starts
+* Hybrid Retrieval Debugging Support
 
 ### Cloud Deployment
 
@@ -348,9 +329,27 @@ Verified Health Checks:
 
 ---
 
+
+## v1.2.0 — Hybrid Retrieval Complete
+
+### Features
+
+* BM25 Retrieval Integration
+* Reciprocal Rank Fusion (RRF)
+* Query Rewriting
+* Retrieval Inspector
+* Vector Score Visualization
+* BM25 Score Visualization
+* RRF Score Visualization
+* Automatic BM25 Rebuild from Qdrant
+* Lambda Cold-Start Recovery
+* Hybrid Retrieval Debugging Support
+
+---
+
 # Planned Roadmap
 
-## v1.2.0 — Evaluation Dashboard
+## v1.3.0 — Evaluation Dashboard
 
 Metrics:
 
@@ -365,11 +364,11 @@ Metrics:
 
 ---
 
-## v1.3.0 — Retrieval Quality
+
+
+## v1.4.0 — Retrieval Quality
 
 * Cross Encoder Reranking
-* Improved Hybrid Search
-* Query Rewriting
 * Better Numeric/Table Reasoning
 * Improved Answer Grounding for Comparisons and Conditions
 
