@@ -33,16 +33,20 @@ async def process_uploaded_document(
 
     image_data = process_pdf_images(file_bytes, document_id)
 
+    image_chunks = [
+        f"Image Page {img['page']}: {img['caption']}"
+        for img in image_data
+    ]
+
     rag_text = build_markdown_document(
         filename=filename,
         text=cleaned_text_only,
         image_data=image_data,
     )
 
-    if rag_text.strip().startswith("#"):
-        chunks = chunk_markdown(rag_text)
-    else:
-        chunks = chunk_text(rag_text)
+    text_chunks = chunk_markdown(rag_text)
+
+    chunks = text_chunks + image_chunks
 
     stored_count = upsert_chunks(
         document_id=document_id,
