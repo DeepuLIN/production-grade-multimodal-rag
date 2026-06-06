@@ -16,7 +16,8 @@ from qdrant_client.models import (
 )
 
 from app.rag.embeddings import embed_texts
-
+from app.core.config import ENABLE_RERANKING, RERANK_MODEL
+from app.rag.reranker import rerank_chunks
 
 
 QDRANT_COLLECTION = os.getenv(
@@ -222,6 +223,10 @@ def debug_sample_payloads(client: QdrantClient):
 
     except Exception as e:
         print("⚠️ QDRANT SAMPLE DEBUG FAILED:", str(e))
+
+
+
+
 def rrf_merge(vector_results, bm25_results, k: int = 60):
     scores = {}
     items = {}
@@ -300,6 +305,11 @@ def debug_qdrant_counts(
 
     except Exception as e:
         print("⚠️ QDRANT COUNT DEBUG FAILED:", str(e))
+
+
+
+
+
 def rebuild_bm25_from_qdrant(
     client: QdrantClient,
     user_id: str | None = None,
@@ -347,6 +357,8 @@ def rebuild_bm25_from_qdrant(
     print("✅ Rebuilt BM25 from Qdrant")
     print("🔥 BM25 REBUILT ITEMS:", len(bm25_index.items))
 
+
+
 def search_chunks(
     query: str,
     top_k: int = 5,
@@ -358,6 +370,12 @@ def search_chunks(
         client = get_qdrant_client()
         create_collection(client)
 
+        candidate_k = max(top_k * 4, 20)
+
+        print("🔥 SEARCH QUERY:", query)
+        print("🔥 TOP_K:", top_k)
+        print("🔥 CANDIDATE_K:", candidate_k)
+
         qdrant_filter = build_qdrant_filter(
             user_id=user_id,
             project_id=project_id,
@@ -366,13 +384,14 @@ def search_chunks(
 
         debug_qdrant_counts(client, qdrant_filter)
         debug_sample_payloads(client)
+
         query_vector = embed_texts([query])[0]
 
         vector_response = client.query_points(
             collection_name=QDRANT_COLLECTION,
             query=query_vector,
             query_filter=qdrant_filter,
-            limit=top_k,
+            limit=candidate_k,
             with_payload=True,
         )
 
@@ -386,15 +405,16 @@ def search_chunks(
                     "vector_score": float(r.score),
                     "text": payload.get("text"),
                     "document_id": payload.get("document_id"),
-                    
                     "project_id": payload.get("project_id"),
                     "user_id": payload.get("user_id"),
                     "filename": payload.get("filename"),
                     "chunk_index": payload.get("chunk_index"),
                 }
             )
+
         print("🔥 BM25 TOTAL ITEMS BEFORE SEARCH:", len(bm25_index.items))
         print("🔥 BM25 INDEX EXISTS BEFORE SEARCH:", bm25_index.bm25 is not None)
+
         if not bm25_index.bm25 or len(bm25_index.items) == 0:
             print("⚠️ BM25 empty. Rebuilding from Qdrant...")
             rebuild_bm25_from_qdrant(
@@ -404,12 +424,12 @@ def search_chunks(
                 document_id=document_id,
             )
 
-        print("🔥 BM25 TOTAL ITEMS BEFORE SEARCH:", len(bm25_index.items))
-        print("🔥 BM25 INDEX EXISTS BEFORE SEARCH:", bm25_index.bm25 is not None)
+        print("🔥 BM25 TOTAL ITEMS AFTER REBUILD CHECK:", len(bm25_index.items))
+        print("🔥 BM25 INDEX EXISTS AFTER REBUILD CHECK:", bm25_index.bm25 is not None)
 
         bm25_results = bm25_index.search(
             query=query,
-            top_k=top_k,
+            top_k=candidate_k,
             user_id=user_id,
             project_id=project_id,
             document_id=document_id,
@@ -424,18 +444,59 @@ def search_chunks(
         if vector_results:
             print("🔥 FIRST VECTOR DOC:", vector_results[0].get("document_id"))
             print("🔥 FIRST VECTOR FILE:", vector_results[0].get("filename"))
+            print("🔥 FIRST VECTOR TEXT:", vector_results[0].get("text", "")[:200])
 
         if bm25_results:
             print("🔥 FIRST BM25 DOC:", bm25_results[0].get("document_id"))
             print("🔥 FIRST BM25 FILE:", bm25_results[0].get("filename"))
+            print("🔥 FIRST BM25 TEXT:", bm25_results[0].get("text", "")[:200])
+
         vector_results = [v for v in vector_results if v.get("text")]
         bm25_results = [b for b in bm25_results if b.get("text")]
+
         merged = rrf_merge(vector_results, bm25_results)
 
+        print("\n🔥 RRF RESULTS:", len(merged))
+        print("🔥 RERANKING ENABLED:", ENABLE_RERANKING)
+
+        if merged:
+            print("🔥 FIRST RRF TEXT:", merged[0].get("text", "")[:200])
+
+        if ENABLE_RERANKING:
+            final_results = rerank_chunks(
+                query=query,
+                chunks=merged,
+                top_k=top_k,
+            )
+
+            final_results = final_results[:top_k]
+
+            print("🔥 FINAL RESULTS AFTER RERANK:", len(final_results))
+
+            if final_results:
+                print(
+                    "🔥 FIRST RERANKED CHUNK:",
+                    final_results[0].get("text", "")[:200],
+                )
+                print(
+                    "🔥 FIRST RERANK RANK:",
+                    final_results[0].get("rerank_rank"),
+                )
+        else:
+            final_results = merged[:top_k]
+            print("⚠️ RERANKING DISABLED, USING RRF ONLY")
+
         return {
-            "merged_results": merged[:top_k],
-            "vector_results": vector_results,
-            "bm25_results": bm25_results,
+            "merged_results": final_results,
+            "vector_results": vector_results[:candidate_k],
+            "bm25_results": bm25_results[:candidate_k],
+            "rrf_results": merged[:candidate_k],
+            "reranking": {
+                "enabled": ENABLE_RERANKING,
+                "applied": ENABLE_RERANKING and len(final_results) > 0,
+                "model": RERANK_MODEL,
+                "candidate_k": candidate_k,
+            },
         }
 
     except Exception as e:
@@ -444,6 +505,13 @@ def search_chunks(
             "merged_results": [],
             "vector_results": [],
             "bm25_results": [],
+            "rrf_results": [],
+            "reranking": {
+                "enabled": False,
+                "applied": False,
+                "model": None,
+                "error": str(e),
+            },
         }
 
 

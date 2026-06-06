@@ -72,3 +72,16 @@ CHAT_MODEL = os.getenv(
     "CHAT_MODEL",
     "meta-llama/llama-3.1-70b-instruct",
 )
+
+# -------------------------
+# RERANKING
+# -------------------------
+ENABLE_RERANKING = os.getenv(
+    "ENABLE_RERANKING",
+    "true",
+).lower() == "true"
+
+RERANK_MODEL = os.getenv(
+    "RERANK_MODEL",
+    "openai/gpt-4o-mini",
+)

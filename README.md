@@ -19,6 +19,8 @@ A production-grade multimodal Retrieval-Augmented Generation (RAG) platform desi
 
 The system combines OCR, image understanding, hybrid retrieval, vector search, metadata filtering, and cloud-native deployment to provide a scalable document intelligence platform.
 
+The platform supports multimodal document ingestion, hybrid retrieval, neural reranking, secure multi-tenant access, and cloud-native deployment on AWS.
+
 ---
 
 # Overview
@@ -57,14 +59,16 @@ This project extends the architecture into a production-oriented multimodal plat
 
 ## Retrieval Pipeline
 
-* Semantic Search
+* Amazon Titan Embedding Search
 * BM25 Keyword Search
 * Hybrid Retrieval
 * Reciprocal Rank Fusion (RRF)
 * Query Rewriting
+* Cross-Encoder Reranking
 * Metadata Filtering
 * Project-Level Isolation
 * Retrieval Inspector
+* Source Attribution
 
 ## Authentication & Security
 
@@ -89,6 +93,7 @@ This project extends the architecture into a production-oriented multimodal plat
 
 # System Architecture
 
+
 ```text
 User
  │
@@ -108,10 +113,9 @@ PostgreSQL (metadata)                     Amazon S3 (raw files)
  │                                             │
  │                                             ▼
  │                                    Large Document Storage
- │                                    (5+ pages handled here)
  │                                             │
  │                                             ▼
- │                              OCR Worker / Processing Pipeline
+ │                              OCR / Multimodal Processing
  │                              (Lambda-compatible async flow)
  │                                             │
  └──────────────────────────────┬──────────────┘
@@ -124,32 +128,86 @@ PostgreSQL (metadata)                     Amazon S3 (raw files)
  OCR Extraction         Image Processing         Markdown Builder
                                 │
                                 ▼
-                           Chunking Layer
+                    Markdown-Aware Chunking
                                 │
                                 ▼
-                ┌──────────────────────────────┐
-                │                              │
-                ▼                              ▼
-        Qdrant (Vectors)       BM25 Index
-                                (in-memory,
-                         rebuilt from Qdrant on
-                            Lambda cold start)
-                │                              │
-                └──────────────┬───────────────┘
-                               ▼
-                      Hybrid Retrieval (RRF)
-                               │
-                               ▼
-                     Context Assembly Layer
-                               │
-                               ▼
-                 LLM Generation (OpenRouter)
-                               │
-                               ▼
-                  Streaming Response to UI
+                      Amazon Titan Embeddings
+                                │
+                                ▼
+                       Qdrant Vector Storage
+                                │
+────────────────────────────────────────────────────────────
+
+                      Question Answering Flow
+
+                                │
+                                ▼
+                          User Query
+                                │
+                                ▼
+                         Query Rewriting
+                                │
+                                ▼
+             ┌──────────────────┴──────────────────┐
+             ▼                                     ▼
+
+      Vector Search                        BM25 Search
+        (Qdrant)                         (Keyword Index)
+
+             ▼                                     ▼
+             └──────────────────┬──────────────────┘
+                                │
+                                ▼
+                  Reciprocal Rank Fusion (RRF)
+                                │
+                                ▼
+                    Candidate Pool Generation
+                           (20–32 chunks)
+                                │
+                                ▼
+                    Cross-Encoder Reranking
+                                │
+                                ▼
+                     Top-K Relevant Chunks
+                                │
+                                ▼
+                      Context Assembly Layer
+                                │
+                                ▼
+                   LLM Generation (OpenRouter)
+                                │
+                                ▼
+                    Streaming Response to UI
 ```
 
----
+
+
+# Enterprise Retrieval Pipeline
+
+The retrieval system follows a modern production-grade architecture rather than relying solely on vector similarity search.
+
+```text
+Query
+  ↓
+Query Rewriting
+  ↓
+Vector Search (Titan + Qdrant)
+      +
+BM25 Retrieval
+  ↓
+Reciprocal Rank Fusion (RRF)
+  ↓
+Candidate Pool Generation
+  ↓
+Cross-Encoder Reranking
+  ↓
+Context Assembly
+  ↓
+LLM Generation
+```
+
+This design combines semantic retrieval, lexical retrieval, rank fusion, and neural reranking to improve retrieval precision and answer grounding across long and complex documents.
+
 
 # Technology Stack
 
@@ -172,13 +230,17 @@ PostgreSQL (metadata)                     Amazon S3 (raw files)
 
 ## AI / RAG
 
-* ![OpenRouter](https://img.shields.io/badge/-OpenRouter-black?style=flat-square) LLM Gateway
-* ![Amazon Bedrock](https://img.shields.io/badge/-Amazon_Bedrock-FF9900?logo=amazonaws&style=flat-square) Embedding Infrastructure
-* ![Titan](https://img.shields.io/badge/-Titan_Text_Embeddings-FF9900?logo=amazonaws&style=flat-square) Vector Embeddings
-* ![Hybrid Retrieval](https://img.shields.io/badge/-Hybrid_Retrieval-green?style=flat-square) Hybrid Search
-* ![RRF](https://img.shields.io/badge/-RRF-orange?style=flat-square) Reciprocal Rank Fusion
-* ![Markdown](https://img.shields.io/badge/-Markdown_Chunking-black?logo=markdown&style=flat-square) Context-Aware Chunking
-* ![OCR](https://img.shields.io/badge/-Diagram_Aware_OCR-blue?style=flat-square) Multimodal Extraction
+* ![Titan](https://img.shields.io/badge/-Titan_Text_Embeddings-FF9900?logo=amazonaws&style=flat-square) Amazon Titan Embeddings
+* ![BM25](https://img.shields.io/badge/-BM25_Search-blue?style=flat-square) BM25 Retrieval
+* ![Hybrid Retrieval](https://img.shields.io/badge/-Hybrid_Retrieval-green?style=flat-square) Hybrid Retrieval
+* ![RRF](https://img.shields.io/badge/-RRF-orange?style=flat-square) Reciprocal Rank Fusion (RRF)
+* ![Cross Encoder](https://img.shields.io/badge/-Cross_Encoder_Reranking-red?style=flat-square) Cross-Encoder Reranking
+* ![Query Rewriting](https://img.shields.io/badge/-Query_Rewriting-purple?style=flat-square) Query Rewriting
+* ![Markdown](https://img.shields.io/badge/-Markdown_Chunking-black?logo=markdown&style=flat-square) Markdown-Aware Chunking
+* ![OCR](https://img.shields.io/badge/-Diagram_Aware_OCR-blue?style=flat-square) Diagram-Aware OCR
+* ![Inspector](https://img.shields.io/badge/-Retrieval_Inspector-teal?style=flat-square) Retrieval Inspector
+* ![OpenRouter](https://img.shields.io/badge/-OpenRouter-black?style=flat-square) OpenRouter LLM Gateway
+* ![Amazon Bedrock](https://img.shields.io/badge/-Amazon_Bedrock-FF9900?logo=amazonaws&style=flat-square) Amazon Bedrock
 
 ## Data Layer
 
@@ -234,6 +296,8 @@ Verified Health Checks:
 
 # Current MVP Status
 
+
+
 ## Completed
 
 ### Core Platform
@@ -286,6 +350,42 @@ Verified Health Checks:
 * User Isolation
 * Project Isolation
 * Production CORS Configuration
+
+
+## Retrieval Quality
+
+* Amazon Titan Embeddings
+* Vector Retrieval
+* BM25 Retrieval
+* Hybrid Search
+* Reciprocal Rank Fusion (RRF)
+* Query Rewriting
+* Cross-Encoder Reranking
+* Candidate Pool Expansion
+* Retrieval Inspector
+* Source Attribution
+
+
+### Retrieval Quality Improvements
+
+The retrieval pipeline uses a cross-encoder reranking stage after hybrid retrieval.
+
+Pipeline:
+
+Vector Search
++
+BM25 Search
+↓
+RRF Fusion
+↓
+Candidate Pool Generation
+↓
+Cross-Encoder Reranking
+↓
+Final Context Selection
+
+This significantly improves retrieval precision compared to vector search alone by scoring query-document relevance jointly before context assembly.
+
 
 ---
 
@@ -347,9 +447,28 @@ Verified Health Checks:
 
 ---
 
+
+## v1.3.0 — Retrieval Quality Upgrade
+
+### Features
+
+* Cross-Encoder Reranking
+* Expanded Candidate Retrieval
+* Cross-Encoder Reranking
+* Improved Context Selection
+* Better Answer Grounding
+* Enhanced Retrieval Precision
+
+### Improvements
+
+* Increased retrieval candidate pool before reranking
+* Improved ranking quality for long documents
+* Reduced irrelevant chunk selection
+* Improved multi-topic document retrieval
+
 # Planned Roadmap
 
-## v1.3.0 — Evaluation Dashboard
+## v1.4.0 — Evaluation Dashboard
 
 Metrics:
 
@@ -365,14 +484,6 @@ Metrics:
 ---
 
 
-
-## v1.4.0 — Retrieval Quality
-
-* Cross Encoder Reranking
-* Better Numeric/Table Reasoning
-* Improved Answer Grounding for Comparisons and Conditions
-
----
 
 
 
@@ -456,15 +567,19 @@ OCR + Visual Understanding
       ↓
 Markdown Conversion
       ↓
-Chunking
+Markdown-Aware Chunking
       ↓
-Hybrid Retrieval
+Vector Search + BM25
       ↓
-Metadata Filtering
+RRF Fusion
       ↓
-Cloud Infrastructure
+Cross-Encoder Reranking
       ↓
-Streaming Answer
+Context Assembly
+      ↓
+Streaming LLM Response
+      ↓
+AWS Cloud Deployment
 ```
 
 The objective is to demonstrate how modern enterprise-grade Retrieval-Augmented Generation systems can be designed, deployed, monitored, and scaled in real-world environments.
@@ -479,6 +594,8 @@ The objective is to demonstrate how modern enterprise-grade Retrieval-Augmented 
 * Automated Deployments
 * S3 Presigned Uploads
 * Multi-Tenant Access Controls
+* Retrieval Evaluation Dashboard
+* Automated Benchmarking
 
 ---
 
@@ -486,7 +603,6 @@ The objective is to demonstrate how modern enterprise-grade Retrieval-Augmented 
 
 **Deepak Lingaraju**
 
-M.Sc. Mechatronics
-University of Duisburg-Essen
+
 
 Machine Learning • Computer Vision • Multimodal AI • Retrieval-Augmented Generation • Cloud Engineering
