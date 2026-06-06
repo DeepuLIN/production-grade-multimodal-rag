@@ -370,6 +370,7 @@ Verified Health Checks:
 The retrieval pipeline uses a cross-encoder reranking stage after hybrid retrieval.
 
 Pipeline:
+```text
 
 Vector Search
 +
@@ -382,7 +383,7 @@ Candidate Pool Generation
 Cross-Encoder Reranking
 ↓
 Final Context Selection
-
+```
 This significantly improves retrieval precision compared to vector search alone by scoring query-document relevance jointly before context assembly.
 
 
