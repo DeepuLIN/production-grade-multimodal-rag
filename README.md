@@ -20,6 +20,7 @@ A production-grade multimodal Retrieval-Augmented Generation (RAG) platform desi
 The system combines OCR, multimodal document processing, hybrid retrieval, neural reranking, vector search, metadata filtering, and cloud-native deployment to provide a scalable document intelligence platform.
 
 🌐 Live Demo: https://project-bs0el.vercel.app
+🌐 Live Demo: https://multimodal-rag-3gln6pagc-deepu-li-n-s-projects.vercel.app
 
 The platform supports multimodal document ingestion, Amazon Titan embeddings, BM25 retrieval, Reciprocal Rank Fusion (RRF), LLM-based reranking, secure multi-tenant access, and cloud-native deployment on AWS.
 
