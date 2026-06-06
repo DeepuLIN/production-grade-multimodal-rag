@@ -136,8 +136,7 @@ PostgreSQL (metadata)                     Amazon S3 (raw files)
                                 ▼
                        Qdrant Vector Storage
                                 │
-────────────────────────────────────────────────────────────
-
+                                ▼
                       Question Answering Flow
 
                                 │
