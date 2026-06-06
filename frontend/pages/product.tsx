@@ -202,10 +202,31 @@ function MultimodalRAGApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProjectId]);
 
+  useEffect(() => {
+  if (!selectedProjectId) return;
+
+  const hasProcessing = documents.some(
+    (doc) => doc.status === "processing"
+  );
+
+  if (!hasProcessing) return;
+
+  const interval = setInterval(() => {
+    loadDocuments(selectedProjectId);
+  }, 5000);
+
+  return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [selectedProjectId, documents]);
+
+
+
+
   async function handleCreateProject() {
     if (!newProjectName.trim()) return;
 
     setCreatingProject(true);
+
     try {
       const headers = await authHeaders(true);
 
@@ -218,17 +239,19 @@ function MultimodalRAGApp() {
       if (!res.ok) throw new Error(await res.text());
 
       const project = await res.json();
+
       setNewProjectName("");
       setSelectedProjectId(project.id);
+
       await loadProjects();
       await loadDocuments(project.id);
     } catch (error) {
-      alert(`Create project failed: ${String(error)}`);
+      setUploadStatus(`Project creation failed: ${String(error)}`);
+      setExtractedText(`Error: ${String(error)}`);
     } finally {
       setCreatingProject(false);
     }
   }
-
   async function handleDeleteProject(projectId: string) {
     const project = projects.find((p) => p.id === projectId);
     const projectName = project?.name || "this project";
@@ -446,6 +469,17 @@ function MultimodalRAGApp() {
     selectedMatch === "all"
       ? null
       : matches.find((_, idx) => String(idx) === selectedMatch);
+  const selectedDocument =
+  selectedDocumentId === "all"
+    ? null
+    : documents.find((doc) => doc.id === selectedDocumentId);
+
+  const canAsk =
+    selectedDocumentId === "all" ||
+    selectedDocument?.status === "completed";
+
+
+
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,#e0f2fe,transparent_35%),radial-gradient(circle_at_top_right,#f5d0fe,transparent_30%),linear-gradient(to_bottom,#f8fafc,#eef2ff)]">
@@ -822,10 +856,14 @@ function MultimodalRAGApp() {
             <button
               title="Search your filtered Qdrant chunks and stream an answer"
               onClick={handleAsk}
-              disabled={!question.trim() || asking}
+              disabled={!question.trim() || asking || !canAsk}
               className="w-full rounded-2xl bg-slate-900 px-8 py-4 text-lg font-bold text-white shadow-xl shadow-slate-300 transition hover:scale-[1.01] hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {asking ? "Streaming answer..." : "Ask with RAG"}
+              {asking
+                ? "Streaming answer..."
+                : !canAsk
+                  ? "Document still processing..."
+                  : "Ask with RAG"}
             </button>
 
             <div className="mt-6">
