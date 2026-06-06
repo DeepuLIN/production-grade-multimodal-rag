@@ -17,9 +17,13 @@
 
 A production-grade multimodal Retrieval-Augmented Generation (RAG) platform designed for intelligent document understanding, knowledge retrieval, and question answering across PDFs, scanned documents, images, and mixed-content files.
 
-The system combines OCR, image understanding, hybrid retrieval, vector search, metadata filtering, and cloud-native deployment to provide a scalable document intelligence platform.
+The system combines OCR, multimodal document processing, hybrid retrieval, neural reranking, vector search, metadata filtering, and cloud-native deployment to provide a scalable document intelligence platform.
 
-The platform supports multimodal document ingestion, hybrid retrieval, neural reranking, secure multi-tenant access, and cloud-native deployment on AWS.
+🌐 Live Demo: https://project-bs0el.vercel.app
+
+The platform supports multimodal document ingestion, Amazon Titan embeddings, BM25 retrieval, Reciprocal Rank Fusion (RRF), LLM-based reranking, secure multi-tenant access, and cloud-native deployment on AWS.
+
+⚠️ Demo Environment: User authentication is enabled. Uploaded documents remain isolated per user and project.
 
 ---
 
