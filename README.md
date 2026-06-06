@@ -1,4 +1,4 @@
-# NoteVision AI
+# Multimodal - RAG
 
 ![Python](https://img.shields.io/badge/Python-3.13-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi)
@@ -233,7 +233,7 @@ This design combines semantic retrieval, lexical retrieval, rank fusion, and neu
 * ![BM25](https://img.shields.io/badge/-BM25_Search-blue?style=flat-square) BM25 Retrieval
 * ![Hybrid Retrieval](https://img.shields.io/badge/-Hybrid_Retrieval-green?style=flat-square) Hybrid Retrieval
 * ![RRF](https://img.shields.io/badge/-RRF-orange?style=flat-square) Reciprocal Rank Fusion (RRF)
-* ![Cross Encoder](https://img.shields.io/badge/-Cross_Encoder_Reranking-red?style=flat-square) Cross-Encoder Reranking
+* ![Reranking](https://img.shields.io/badge/-LLM_Reranking-red?style=flat-square) LLM-Based Reranking
 * ![Query Rewriting](https://img.shields.io/badge/-Query_Rewriting-purple?style=flat-square) Query Rewriting
 * ![Markdown](https://img.shields.io/badge/-Markdown_Chunking-black?logo=markdown&style=flat-square) Markdown-Aware Chunking
 * ![OCR](https://img.shields.io/badge/-Diagram_Aware_OCR-blue?style=flat-square) Diagram-Aware OCR
@@ -359,7 +359,7 @@ Verified Health Checks:
 * Hybrid Search
 * Reciprocal Rank Fusion (RRF)
 * Query Rewriting
-* Cross-Encoder Reranking
+* LLM-based Reranking
 * Candidate Pool Expansion
 * Retrieval Inspector
 * Source Attribution
