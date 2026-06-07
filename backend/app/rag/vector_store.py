@@ -114,7 +114,7 @@ def build_qdrant_filter(
 
 def upsert_chunks(
     document_id: str,
-    chunks: List[str],
+    chunks: List[Any],
     metadata: Dict[str, Any] | None = None,
 ) -> int:
     if not chunks:
@@ -124,7 +124,59 @@ def upsert_chunks(
         client = get_qdrant_client()
         create_collection(client)
 
-        embeddings = embed_texts(chunks)
+        normalized_chunks = []
+
+        for chunk in chunks:
+            if isinstance(chunk, dict):
+                text = chunk.get("text", "")
+
+                if not text:
+                    continue
+
+                normalized_chunks.append(
+                    {
+                        "text": text,
+                        "chunk_type": chunk.get("chunk_type", "text"),
+                        "caption": chunk.get("caption"),
+                        "page": chunk.get("page"),
+                        "image_s3_key": chunk.get("image_s3_key"),
+                        "table_markdown": chunk.get("table_markdown"),
+                    }
+
+
+                )
+
+                print(
+                    f"💾 UPSERT CHUNK | "
+                    f"type={chunk.get('chunk_type')} | "
+                    f"page={chunk.get('page')}"
+                )
+
+
+
+            else:
+                text = str(chunk)
+
+                if not text:
+                    continue
+
+                normalized_chunks.append(
+                    {
+                        "text": text,
+                        "chunk_type": "text",
+                        "caption": None,
+                        "page": None,
+                        "image_s3_key": None,
+                        "table_markdown": None,
+                    }
+                )
+
+        if not normalized_chunks:
+            return 0
+
+        texts = [chunk["text"] for chunk in normalized_chunks]
+
+        embeddings = embed_texts(texts)
 
         if not embeddings:
             raise Exception("❌ Embeddings returned empty")
@@ -138,19 +190,23 @@ def upsert_chunks(
         print("🔥 UPSERT USER:", real_user_id)
         print("🔥 UPSERT PROJECT:", real_project_id)
         print("🔥 UPSERT DOCUMENT:", real_document_id)
-        print("🔥 UPSERT CHUNKS:", len(chunks))
+        print("🔥 UPSERT CHUNKS:", len(normalized_chunks))
 
         points = []
 
-        for i, (chunk, vector) in enumerate(zip(chunks, embeddings)):
+        for i, (chunk, vector) in enumerate(zip(normalized_chunks, embeddings)):
             payload = {
                 **metadata,
                 "user_id": real_user_id,
                 "project_id": real_project_id,
                 "document_id": real_document_id,
-                
                 "chunk_index": i,
-                "text": chunk,
+                "text": chunk["text"],
+                "chunk_type": chunk.get("chunk_type", "text"),
+                "caption": chunk.get("caption"),
+                "page": chunk.get("page"),
+                "image_s3_key": chunk.get("image_s3_key"),
+                "table_markdown": chunk.get("table_markdown"),
             }
 
             points.append(
@@ -170,28 +226,32 @@ def upsert_chunks(
 
         bm25_items = []
 
-        for i, chunk in enumerate(chunks):
+        for i, chunk in enumerate(normalized_chunks):
             bm25_items.append(
                 {
-                    "text": chunk,
+                    "text": chunk["text"],
                     "metadata": {
                         **metadata,
                         "user_id": real_user_id,
                         "project_id": real_project_id,
                         "document_id": real_document_id,
-                        
                         "chunk_index": i,
+                        "chunk_type": chunk.get("chunk_type", "text"),
+                        "caption": chunk.get("caption"),
+                        "page": chunk.get("page"),
+                        "image_s3_key": chunk.get("image_s3_key"),
+                        "table_markdown": chunk.get("table_markdown"),
                     },
                 }
             )
 
-        # ensure metadata consistency before indexing
         for item in bm25_items:
             item["metadata"]["document_id"] = real_document_id
             item["metadata"]["user_id"] = real_user_id
             item["metadata"]["project_id"] = real_project_id
 
         bm25_index.add(bm25_items)
+
         print("✅ BM25 index updated")
         print("🔥 BM25 TOTAL ITEMS:", len(bm25_index.items))
 
@@ -348,6 +408,14 @@ def rebuild_bm25_from_qdrant(
                     "document_id": payload.get("document_id"),
                     "filename": payload.get("filename"),
                     "chunk_index": payload.get("chunk_index"),
+                    
+                    
+                    "chunk_type": payload.get("chunk_type", "text"),
+                    "caption": payload.get("caption"),
+                    "page": payload.get("page"),
+                    "image_s3_key": payload.get("image_s3_key"),
+                    "table_markdown": payload.get("table_markdown"),
+                
                 },
             }
         )
@@ -409,6 +477,13 @@ def search_chunks(
                     "user_id": payload.get("user_id"),
                     "filename": payload.get("filename"),
                     "chunk_index": payload.get("chunk_index"),
+
+                    # V2 fields
+                    "chunk_type": payload.get("chunk_type", "text"),
+                    "caption": payload.get("caption"),
+                    "page": payload.get("page"),
+                    "image_s3_key": payload.get("image_s3_key"),
+                    "table_markdown": payload.get("table_markdown"),
                 }
             )
 
@@ -469,7 +544,16 @@ def search_chunks(
                 top_k=top_k,
             )
 
+            
+
             final_results = final_results[:top_k]
+            for i, r in enumerate(final_results[:5]):
+                print(
+                    f"🏆 FINAL RESULT {i+1} | "
+                    f"type={r.get('chunk_type')} | "
+                    f"page={r.get('page')} | "
+                    f"has_image={bool(r.get('image_s3_key'))}"
+                )
 
             print("🔥 FINAL RESULTS AFTER RERANK:", len(final_results))
 
@@ -485,6 +569,14 @@ def search_chunks(
         else:
             final_results = merged[:top_k]
             print("⚠️ RERANKING DISABLED, USING RRF ONLY")
+
+            for i, r in enumerate(final_results[:5]):
+                print(
+                    f"🏆 FINAL RESULT {i+1} | "
+                    f"type={r.get('chunk_type')} | "
+                    f"page={r.get('page')} | "
+                    f"has_image={bool(r.get('image_s3_key'))}"
+                )
 
         return {
             "merged_results": final_results,

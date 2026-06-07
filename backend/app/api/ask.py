@@ -9,6 +9,7 @@ from app.rag.vector_store import search_chunks
 from app.core.config import CHAT_MODEL
 from app.auth.clerk import get_current_user
 from app.db import models
+from app.storage.s3 import get_presigned_url
 
 router = APIRouter()
 
@@ -46,6 +47,13 @@ class MatchOut(BaseModel):
     user_id: str | None = None
 
     chunk_index: int | None = None
+        # V2 visual/table fields
+    chunk_type: str = "text"
+    caption: str | None = None
+    image_s3_key: str | None = None
+    image_url: str | None = None
+    table_markdown: str | None = None
+
 
 
 class AskResponse(BaseModel):
@@ -181,6 +189,16 @@ def normalize_matches(results: dict, top_k: int = 5) -> list[MatchOut]:
         if not text:
             continue
 
+        image_s3_key = item.get("image_s3_key")
+        image_url = get_presigned_url(image_s3_key) if image_s3_key else None
+        print(
+            f"📤 MATCH | "
+            f"type={item.get('chunk_type')} | "
+            f"page={item.get('page')} | "
+            f"has_key={bool(image_s3_key)} | "
+            f"has_url={bool(image_url)}"
+        )
+
         top_matches.append(
             MatchOut(
                 rank=idx + 1,
@@ -197,11 +215,20 @@ def normalize_matches(results: dict, top_k: int = 5) -> list[MatchOut]:
                 project_id=item.get("project_id"),
                 user_id=item.get("user_id"),
                 chunk_index=item.get("chunk_index"),
+
+                # V2 fields
+                chunk_type=item.get("chunk_type", "text"),
+                caption=item.get("caption"),
+                image_s3_key=image_s3_key,
+                image_url=image_url,
+                table_markdown=item.get("table_markdown"),
+
+                
             )
+
         )
 
     return top_matches
-
 
 def build_context(results: dict, top_k: int = 8) -> str:
     context_parts = []

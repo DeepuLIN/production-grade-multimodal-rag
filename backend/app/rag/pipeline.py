@@ -8,9 +8,6 @@ from app.rag.markdown_chunker import chunk_markdown
 from app.storage.s3 import upload_ocr_json
 
 
-
-
-
 async def process_uploaded_document(
     document_id: str,
     filename: str,
@@ -33,10 +30,7 @@ async def process_uploaded_document(
 
     image_data = process_pdf_images(file_bytes, document_id)
 
-    image_chunks = [
-        f"Image Page {img['page']}: {img['caption']}"
-        for img in image_data
-    ]
+    print(f"🖼️ IMAGES FOUND: {len(image_data)}")
 
     rag_text = build_markdown_document(
         filename=filename,
@@ -46,7 +40,33 @@ async def process_uploaded_document(
 
     text_chunks = chunk_markdown(rag_text)
 
-    chunks = text_chunks + image_chunks
+    chunks = [
+        {"chunk_type": "text", "text": chunk}
+        for chunk in text_chunks
+    ]
+
+    for img in image_data:
+        print(
+            f"📦 FIGURE CHUNK CREATED | "
+            f"page={img['page']} | "
+            f"has_key={bool(img.get('image_s3_key'))}"
+        )
+
+        chunks.append(
+            {
+                "chunk_type": "figure",
+                "text": f"Image Page {img['page']}: {img['caption']}",
+                "caption": img["caption"],
+                "page": img["page"],
+                "image_s3_key": img.get("image_s3_key"),
+            }
+        )
+
+    print(f"📚 TOTAL CHUNKS: {len(chunks)}")
+    print(
+        f"📚 TEXT CHUNKS: {len(text_chunks)} | "
+        f"FIGURE CHUNKS: {len(image_data)}"
+    )
 
     stored_count = upsert_chunks(
         document_id=document_id,
@@ -83,7 +103,6 @@ async def process_uploaded_document(
         "images_found": len(image_data),
         "ocr_key": ocr_key,
     }
-
 
 
 def process_document_text(

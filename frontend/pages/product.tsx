@@ -45,6 +45,17 @@ type Match = {
   document_id?: string;
   project_id?: string;
   chunk_index?: number | null;
+
+  chunk_type?: "text" | "figure" | "table";
+  caption?: string | null;
+  image_s3_key?: string | null;
+  image_url?: string | null;
+  table_markdown?: string | null;
+
+
+
+
+
 };
 
 function shortName(name?: string, max = 44) {
@@ -469,14 +480,24 @@ function MultimodalRAGApp() {
     selectedMatch === "all"
       ? null
       : matches.find((_, idx) => String(idx) === selectedMatch);
+
+  const firstImageMatch = matches.find(
+    (match) =>
+      match.chunk_type === "figure" &&
+      match.image_url
+  );
+
   const selectedDocument =
-  selectedDocumentId === "all"
-    ? null
-    : documents.find((doc) => doc.id === selectedDocumentId);
+    selectedDocumentId === "all"
+      ? null
+      : documents.find((doc) => doc.id === selectedDocumentId);
 
   const canAsk =
     selectedDocumentId === "all" ||
     selectedDocument?.status === "completed";
+
+
+  
 
 
 
@@ -751,10 +772,46 @@ function MultimodalRAGApp() {
                         </p>
                       </div>
                     </div>
+                    {selectedMatchObject.chunk_type === "figure" &&
+                      selectedMatchObject.image_url && (
+                        <img
+                          src={selectedMatchObject.image_url}
+                          alt={selectedMatchObject.caption || "Retrieved figure"}
+                          className="mb-4 max-h-[420px] w-full rounded-2xl border border-slate-200 object-contain"
+                        />
+                      )}
 
+                    {selectedMatchObject.chunk_type === "table" &&
+                      selectedMatchObject.table_markdown && (
+                        <div className="prose prose-sm mb-4 max-w-none overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {selectedMatchObject.table_markdown}
+                          </ReactMarkdown>
+                        </div>
+                      )}
                     <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
                       {selectedMatchObject.text}
                     </p>
+                    {selectedMatchObject.chunk_type === "figure" &&
+                      selectedMatchObject.image_url && (
+                        <img
+                          src={selectedMatchObject.image_url}
+                          alt={selectedMatchObject.caption || "Retrieved figure"}
+                          className="mt-4 max-h-[420px] w-full rounded-2xl border border-slate-200 object-contain"
+                        />
+                      )}
+
+                    {selectedMatchObject.chunk_type === "table" &&
+                      selectedMatchObject.table_markdown && (
+                        <div className="prose prose-sm mt-4 max-w-none overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {selectedMatchObject.table_markdown}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+
+
+
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -809,10 +866,32 @@ function MultimodalRAGApp() {
                             </p>
                           </div>
                         </div>
+                        {match.chunk_type === "figure" && (
+                          <p className="mb-2 text-xs font-bold text-emerald-700">
+                            Figure source detected · image_url: {match.image_url ? "yes" : "no"}
+                          </p>
+                        )}
+
+                        {match.chunk_type === "figure" && match.image_url && (
+                          <img
+                            src={match.image_url}
+                            alt={match.caption || "Retrieved figure"}
+                            className="mb-4 max-h-[420px] w-full rounded-2xl border border-slate-200 bg-white object-contain"
+                          />
+                        )}
+
+                        {match.chunk_type === "table" && match.table_markdown && (
+                          <div className="prose prose-sm mb-4 max-w-none overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {match.table_markdown}
+                            </ReactMarkdown>
+                          </div>
+                        )}
 
                         <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
                           {match.text}
                         </p>
+
                       </div>
                     ))}
                   </div>
@@ -880,6 +959,25 @@ function MultimodalRAGApp() {
                     >
                       {normalizeMath(answer)}
                     </ReactMarkdown>
+
+                    {firstImageMatch && (
+                      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="mb-2 text-sm font-bold text-slate-900">
+                          Retrieved Visual Source
+                        </p>
+
+                        <img
+                          src={firstImageMatch.image_url || ""}
+                          alt={firstImageMatch.caption || "Retrieved visual source"}
+                          className="max-h-[500px] w-full rounded-xl border border-slate-200 object-contain"
+                        />
+
+                        <p className="mt-3 text-xs text-slate-500">
+                          Source: {firstImageMatch.filename || firstImageMatch.source}
+                          {firstImageMatch.page ? ` · Page ${firstImageMatch.page}` : ""}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-slate-400">

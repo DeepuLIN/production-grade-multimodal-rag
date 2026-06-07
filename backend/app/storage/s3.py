@@ -33,7 +33,6 @@ def upload_original_file(
     return key
 
 
-
 def download_s3_file(key: str) -> bytes:
     if not key:
         raise ValueError("S3 key is missing")
@@ -46,6 +45,8 @@ def download_s3_file(key: str) -> bytes:
     )
 
     return response["Body"].read()
+
+
 def upload_ocr_json(
     document_id: str,
     filename: str,
@@ -75,7 +76,7 @@ def upload_ocr_json(
     return key
 
 
-def upload_chunks(document_id: str, chunks: list[str]):
+def upload_chunks(document_id: str, chunks: list):
     s3 = get_s3_client()
 
     key = f"chunks/{document_id}/chunks.json"
@@ -89,7 +90,7 @@ def upload_chunks(document_id: str, chunks: list[str]):
     s3.put_object(
         Bucket=S3_BUCKET_NAME,
         Key=key,
-        Body=json.dumps(body).encode("utf-8"),
+        Body=json.dumps(body, ensure_ascii=False, indent=2).encode("utf-8"),
         ContentType="application/json",
     )
 
@@ -114,6 +115,25 @@ def upload_image_file(
     )
 
     return key
+
+
+def get_presigned_url(
+    key: str | None,
+    expires_in: int = 3600,
+) -> str | None:
+    if not key:
+        return None
+
+    s3 = get_s3_client()
+
+    return s3.generate_presigned_url(
+        "get_object",
+        Params={
+            "Bucket": S3_BUCKET_NAME,
+            "Key": key,
+        },
+        ExpiresIn=expires_in,
+    )
 
 
 def delete_s3_object(key: str | None) -> bool:

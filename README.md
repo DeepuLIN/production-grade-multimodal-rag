@@ -333,6 +333,11 @@ Verified Health Checks:
 * Query Rewriting Visibility
 * Automatic BM25 Rebuild from Qdrant after Lambda Cold Starts
 * Hybrid Retrieval Debugging Support
+* Visual Retrieval Inspector
+* Figure Chunk Retrieval
+* Page-Level Visual Source Preview
+* Image Source Attribution
+* Visual Chunk Metadat
 
 ### Cloud Deployment
 
@@ -470,23 +475,28 @@ This significantly improves retrieval precision compared to vector search alone 
 * Reduced irrelevant chunk selection
 * Improved multi-topic document retrieval
 
+
+## v2.1.0 — Visual Retrieval
+
+### Features
+
+* Visual Chunk Creation
+* Figure-Level Metadata Storage
+* Image Caption Retrieval
+* Visual Retrieval Inspector
+* Page-Level Visual Source Preview
+* Figure Source Attribution
+* Presigned S3 Visual Source Delivery
+
+### Improvements
+
+* Images are indexed as first-class retrieval units
+* Figure chunks participate in Hybrid Retrieval
+* Visual chunks participate in RRF Fusion
+* Visual chunks participate in LLM-based Reranking
+* Retrieved figures can be previewed directly in the UI
+
 # Planned Roadmap
-
-## v1.4.0 — Evaluation Dashboard
-
-Metrics:
-
-* Recall@K
-* Precision@K
-* MRR
-* nDCG
-* Faithfulness
-* Answer Relevance
-* Context Relevance
-* LLM-as-a-Judge
-
----
-
 
 
 
@@ -535,6 +545,34 @@ Research direction:
 * Explore image patching or region-based visual chunking inspired by Vision Transformer-style processing
 * Combine visual chunks with nearby text chunks for better context-aware retrieval
 * Evaluate whether visual embeddings, text captions, or hybrid image-text retrieval gives the best result
+
+
+Current Limitation
+
+* Retrieval returns page-level images rather than cropped figures.
+
+Next Step (V2.2)
+
+* Cropped Figure Extraction
+* Figure-Level Source Preview
+* Table Extraction
+* Structured Table Retrieval
+
+Then commit:
+
+git add .
+git commit -m "feat: visual rag v2.1 page-level visual retrieval"
+git push
+
+This is a meaningful milestone because you've moved from:
+
+Text RAG
+
+to:
+
+Multimodal RAG + Visual Retrieval
+
+which is a substantial upgrade over the previous MVP.
 
 
 ---

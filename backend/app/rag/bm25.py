@@ -71,6 +71,13 @@ class BM25Index:
                 "project_id": metadata.get("project_id"),
                 "user_id": metadata.get("user_id"),
                 "filename": metadata.get("filename"),
+
+                # V2 visual/table fields
+                "chunk_type": metadata.get("chunk_type", "text"),
+                "caption": metadata.get("caption"),
+                "page": metadata.get("page"),
+                "image_s3_key": metadata.get("image_s3_key"),
+                "table_markdown": metadata.get("table_markdown"),
             })
 
         results.sort(key=lambda x: x["bm25_score"], reverse=True)
