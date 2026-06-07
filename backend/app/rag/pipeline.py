@@ -30,7 +30,7 @@ async def process_uploaded_document(
 
     image_data = process_pdf_images(file_bytes, document_id)
 
-    print(f"🖼️ IMAGES FOUND: {len(image_data)}")
+    print(f"🖼️ VISUAL ITEMS FOUND: {len(image_data)}")
 
     rag_text = build_markdown_document(
         filename=filename,
@@ -45,33 +45,70 @@ async def process_uploaded_document(
         for chunk in text_chunks
     ]
 
-    for img in image_data:
+    figure_count = 0
+    table_count = 0
+
+    for item in image_data:
+        chunk_type = item.get("chunk_type", "figure")
+
+        if chunk_type == "table":
+            table_count += 1
+
+            print(
+                f"📦 TABLE CHUNK CREATED | "
+                f"page={item.get('page')} | "
+                f"has_key={bool(item.get('image_s3_key'))}"
+            )
+
+            chunks.append(
+                {
+                    "chunk_type": "table",
+                    "text": (
+                        f"Table source on page {item.get('page')}.\n"
+                        f"This is a table-level chunk extracted from the PDF.\n"
+                        f"Use this chunk for questions about tables, rows, columns, values, comparisons, "
+                        f"metrics, results, measurements, or tabular data.\n\n"
+                        f"Table caption:\n{item.get('caption', '')}\n\n"
+                        f"Table Markdown:\n{item.get('table_markdown', '')}"
+                    ),
+                    "caption": item.get("caption"),
+                    "page": item.get("page"),
+                    "image_s3_key": item.get("image_s3_key"),
+                    "table_markdown": item.get("table_markdown"),
+                }
+            )
+
+            continue
+
+        figure_count += 1
+
         print(
             f"📦 FIGURE CHUNK CREATED | "
-            f"page={img['page']} | "
-            f"has_key={bool(img.get('image_s3_key'))}"
+            f"page={item.get('page')} | "
+            f"has_key={bool(item.get('image_s3_key'))}"
         )
 
         chunks.append(
             {
                 "chunk_type": "figure",
                 "text": (
-                    f"Visual source on page {img['page']}.\n"
+                    f"Visual source on page {item.get('page')}.\n"
                     f"This is a page-level visual chunk extracted from the PDF.\n"
                     f"If the caption mentions Figure, Fig., Table, Equation, diagram, chart, or architecture, "
                     f"use this chunk for visual/figure-related questions.\n\n"
-                    f"Visual caption metadata:\n{img['caption']}"
+                    f"Visual caption metadata:\n{item.get('caption', '')}"
                 ),
-                "caption": img["caption"],
-                "page": img["page"],
-                "image_s3_key": img.get("image_s3_key"),
+                "caption": item.get("caption"),
+                "page": item.get("page"),
+                "image_s3_key": item.get("image_s3_key"),
             }
         )
 
     print(f"📚 TOTAL CHUNKS: {len(chunks)}")
     print(
         f"📚 TEXT CHUNKS: {len(text_chunks)} | "
-        f"FIGURE CHUNKS: {len(image_data)}"
+        f"FIGURE CHUNKS: {figure_count} | "
+        f"TABLE CHUNKS: {table_count}"
     )
 
     stored_count = upsert_chunks(
@@ -107,6 +144,9 @@ async def process_uploaded_document(
         "chunks_created": len(chunks),
         "chunks_stored_in_qdrant": stored_count,
         "images_found": len(image_data),
+        "visual_items_found": len(image_data),
+        "figures_found": figure_count,
+        "tables_found": table_count,
         "ocr_key": ocr_key,
     }
 

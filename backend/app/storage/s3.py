@@ -154,3 +154,23 @@ def delete_s3_object(key: str | None) -> bool:
     except Exception as e:
         print(f"⚠️ Failed to delete S3 object {key}: {e}")
         return False
+    
+
+def upload_table_image_file(
+    document_id: str,
+    page: int,
+    table_index: int,
+    file_bytes: bytes,
+):
+    s3 = get_s3_client()
+
+    key = f"tables/{document_id}/page_{page}_table_{table_index}.png"
+
+    s3.put_object(
+        Bucket=S3_BUCKET_NAME,
+        Key=key,
+        Body=file_bytes,
+        ContentType="image/png",
+    )
+
+    return key

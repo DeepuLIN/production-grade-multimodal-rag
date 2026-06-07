@@ -183,7 +183,10 @@ async def upload_document(
                 "chunks_stored_in_qdrant": result["chunks_stored_in_qdrant"],
             },
             "image_pipeline": {
-                "images_found": result["images_found"],
+                "images_found": result.get("images_found", 0),
+                "visual_items_found": result.get("visual_items_found", 0),
+                "figures_found": result.get("figures_found", 0),
+                "tables_found": result.get("tables_found", 0),
             },
             "storage": {
                 "saved": True,

@@ -486,6 +486,11 @@ function MultimodalRAGApp() {
       match.chunk_type === "figure" &&
       match.image_url
   );
+  const firstTableMatch = matches.find(
+    (match) =>
+      match.chunk_type === "table" &&
+      (match.image_url || match.table_markdown)
+  );
 
   const selectedDocument =
     selectedDocumentId === "all"
@@ -975,6 +980,35 @@ function MultimodalRAGApp() {
                         <p className="mt-3 text-xs text-slate-500">
                           Source: {firstImageMatch.filename || firstImageMatch.source}
                           {firstImageMatch.page ? ` · Page ${firstImageMatch.page}` : ""}
+                        </p>
+                      </div>
+                    )}
+
+                    {firstTableMatch && (
+                      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="mb-2 text-sm font-bold text-slate-900">
+                          Retrieved Table Source
+                        </p>
+
+                        {firstTableMatch.image_url && (
+                          <img
+                            src={firstTableMatch.image_url}
+                            alt={firstTableMatch.caption || "Retrieved table source"}
+                            className="mb-4 max-h-[500px] w-full rounded-xl border border-slate-200 object-contain"
+                          />
+                        )}
+
+                        {firstTableMatch.table_markdown && (
+                          <div className="prose prose-sm max-w-none overflow-x-auto">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {firstTableMatch.table_markdown}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+
+                        <p className="mt-3 text-xs text-slate-500">
+                          Source: {firstTableMatch.filename || firstTableMatch.source}
+                          {firstTableMatch.page ? ` · Page ${firstTableMatch.page}` : ""}
                         </p>
                       </div>
                     )}

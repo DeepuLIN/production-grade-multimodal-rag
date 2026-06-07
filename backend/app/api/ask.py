@@ -282,9 +282,9 @@ def build_messages(context: str, user_query: str):
                 "When possible, mention the source/chunk used. "
                 "If the question asks about a figure, diagram, image, architecture, chart, table, equation, or formula, prioritize information from sources marked type=figure. "
 
-                "If multiple sources are available and some are type=figure, use those visual sources before generic text sources when answering visual questions. "
+                "If the question asks about a figure, diagram, image, architecture, chart, table, equation, or formula, prioritize information from sources marked type=figure or type=table. "
 
-                "If a source explicitly mentions a figure number (Figure 1, Figure 2, Figure 3, etc.), use that source when answering questions about that figure. "
+                "If multiple sources are available and some are type=figure or type=table, use those visual/table sources before generic text sources when answering visual questions. "
 
                 "For mathematical expressions, equations, formulas, and scientific notation, use valid LaTeX syntax. "
                 "For block equations, use $$ ... $$. "
@@ -344,7 +344,7 @@ def ask(
             rewritten_query,
             top_k=max(req.top_k, 8),
             user_id=current_user.id,
-            project_id=req.project_id,
+            project_id=None if document_id else req.project_id,
             document_id=document_id,
         )
 

@@ -2,8 +2,9 @@ import fitz
 import base64
 from openai import OpenAI
 import os
+import re
 
-from app.storage.s3 import upload_image_file
+from app.storage.s3 import upload_image_file, upload_table_image_file
 
 
 client = OpenAI(
@@ -37,7 +38,148 @@ def render_pages(pdf_bytes: bytes):
 
 
 # -----------------------------
-# CAPTION
+# CONVERT TABLE ROWS TO MARKDOWN
+# -----------------------------
+def table_rows_to_markdown(rows: list[list]) -> str:
+    if not rows:
+        return ""
+
+    cleaned_rows = [
+        [str(cell or "").replace("\n", " ").strip() for cell in row]
+        for row in rows
+    ]
+
+    header = cleaned_rows[0]
+    body = cleaned_rows[1:]
+
+    if not header:
+        return ""
+
+    markdown = "| " + " | ".join(header) + " |\n"
+    markdown += "| " + " | ".join(["---"] * len(header)) + " |\n"
+
+    for row in body:
+        while len(row) < len(header):
+            row.append("")
+
+        markdown += "| " + " | ".join(row[: len(header)]) + " |\n"
+
+    return markdown
+
+
+# -----------------------------
+# DETECT REAL TABLE LABEL FROM PAGE TEXT
+# -----------------------------
+def detect_visible_table_label(
+    page_text: str,
+    fallback_caption: str,
+) -> str:
+    if not page_text:
+        return fallback_caption
+
+    matches = re.findall(
+        r"(Table\s+\d+[:.\-\s][\s\S]{0,300}?)(?=\n[A-Z][a-z]|\n\d+\.|\nFigure\s+\d+|\Z)",
+        page_text,
+        flags=re.IGNORECASE,
+    )
+
+    if matches:
+        return " ".join(matches[0].split())
+
+    simple_matches = re.findall(
+        r"(Table\s+\d+[:.\-\s][^\n]{0,200})",
+        page_text,
+        flags=re.IGNORECASE,
+    )
+
+    if simple_matches:
+        return " ".join(simple_matches[0].split())
+
+    return fallback_caption
+
+
+# -----------------------------
+# EXTRACT TABLES
+# -----------------------------
+def extract_pdf_tables(pdf_bytes: bytes, document_id: str):
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+    results = []
+
+    for page_index in range(len(doc)):
+        page = doc[page_index]
+        page_number = page_index + 1
+        page_text = page.get_text("text") or ""
+
+        try:
+            table_finder = page.find_tables()
+            tables = table_finder.tables or []
+
+            for table_index, table in enumerate(tables):
+                try:
+                    rows = table.extract()
+                    table_markdown = table_rows_to_markdown(rows)
+
+                    rect = fitz.Rect(table.bbox)
+
+                    pix = page.get_pixmap(
+                        clip=rect,
+                        dpi=200,
+                    )
+
+                    table_bytes = pix.tobytes("png")
+
+                    table_s3_key = upload_table_image_file(
+                        document_id=document_id,
+                        page=page_number,
+                        table_index=table_index,
+                        file_bytes=table_bytes,
+                    )
+
+                    fallback_caption = (
+                        f"Extracted table {table_index + 1} on page {page_number}"
+                    )
+
+                    caption = detect_visible_table_label(
+                        page_text=page_text,
+                        fallback_caption=fallback_caption,
+                    )
+
+                    print(
+                        f"📊 TABLE STORED | "
+                        f"page={page_number} | "
+                        f"table={table_index} | "
+                        f"caption={caption[:100]} | "
+                        f"key={table_s3_key}"
+                    )
+
+                    results.append(
+                        {
+                            "chunk_type": "table",
+                            "page": page_number,
+                            "table_index": table_index,
+                            "caption": caption,
+                            "table_markdown": table_markdown,
+                            "image_s3_key": table_s3_key,
+                        }
+                    )
+
+                except Exception as table_error:
+                    print(
+                        f"⚠️ table extraction failed | "
+                        f"page={page_number} | "
+                        f"table={table_index} | "
+                        f"error={table_error}"
+                    )
+
+        except Exception as e:
+            print(f"⚠️ no tables extracted on page {page_number}: {e}")
+
+    return results
+
+
+# -----------------------------
+# CAPTION PAGE IMAGE
 # -----------------------------
 def caption_image(image_bytes: bytes) -> str:
     image_base64 = base64.b64encode(image_bytes).decode()
@@ -131,5 +273,14 @@ def process_pdf_images(pdf_bytes: bytes, document_id: str):
 
         except Exception as e:
             print("❌ vision error:", e)
+
+    table_results = extract_pdf_tables(
+        pdf_bytes=pdf_bytes,
+        document_id=document_id,
+    )
+
+    print(f"📊 TABLES FOUND: {len(table_results)}")
+
+    results.extend(table_results)
 
     return results
