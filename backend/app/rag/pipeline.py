@@ -55,7 +55,13 @@ async def process_uploaded_document(
         chunks.append(
             {
                 "chunk_type": "figure",
-                "text": f"Image Page {img['page']}: {img['caption']}",
+                "text": (
+                    f"Visual source on page {img['page']}.\n"
+                    f"This is a page-level visual chunk extracted from the PDF.\n"
+                    f"If the caption mentions Figure, Fig., Table, Equation, diagram, chart, or architecture, "
+                    f"use this chunk for visual/figure-related questions.\n\n"
+                    f"Visual caption metadata:\n{img['caption']}"
+                ),
                 "caption": img["caption"],
                 "page": img["page"],
                 "image_s3_key": img.get("image_s3_key"),

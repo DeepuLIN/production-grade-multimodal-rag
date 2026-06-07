@@ -24,7 +24,13 @@ def rerank_chunks(
     candidates = chunks[:20]
 
     candidate_text = "\n\n".join(
-        f"ID: {i}\nTEXT:\n{item.get('text', '')[:1500]}"
+        (
+            f"ID: {i}\n"
+            f"TYPE: {item.get('chunk_type', 'text')}\n"
+            f"PAGE: {item.get('page')}\n"
+            f"VISUAL_BOOST: {item.get('visual_boost', False)}\n"
+            f"TEXT:\n{item.get('text', '')[:1500]}"
+        )
         for i, item in enumerate(candidates)
     )
 
@@ -43,14 +49,16 @@ def rerank_chunks(
                 {
                     "role": "system",
                     "content": (
-                    "You are a strict retrieval reranker for a RAG system. "
-                    "Rank chunks ONLY by how directly they answer the user query. "
-                    "Exact mentions of query concepts, acronyms, technologies, projects, and equations are more important than general topical similarity. "
-                    "Do NOT rank a chunk highly just because it is broadly about work experience. "
-                    "If the query asks about RAG, Retrieval-Augmented Generation, LLMs, Qdrant, embeddings, OCR, or multimodal retrieval, prefer chunks that explicitly mention those terms or clearly describe those systems. "
-                    "Return ONLY valid JSON like: "
-                    "{\"ranked_ids\":[0,2,1]}"
-                )
+                        "You are a strict retrieval reranker for a RAG system. "
+                        "Rank chunks ONLY by how directly they answer the user query. "
+                        "Exact mentions of query concepts, acronyms, technologies, projects, figure numbers, table numbers, and equations are more important than general topical similarity. "
+                        "If the query asks about a figure, fig., diagram, image, chart, table, equation, formula, architecture, or visual element, prefer chunks with TYPE: figure when relevant. "
+                        "If the query mentions a specific figure number such as Figure 1, Figure 2, Fig. 3, or Figure 4, prefer chunks that explicitly mention that exact figure number. "
+                        "If a TYPE: figure chunk and a TYPE: text chunk both answer the query, rank the TYPE: figure chunk higher for visual questions. "
+                        "Do NOT rank a chunk highly just because it is broadly related. "
+                        "Return ONLY valid JSON like: "
+                        "{\"ranked_ids\":[0,2,1]}"
+                    ),
                 },
                 {
                     "role": "user",

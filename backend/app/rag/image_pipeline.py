@@ -48,8 +48,9 @@ def caption_image(image_bytes: bytes) -> str:
             {
                 "role": "system",
                 "content": (
-                    "Describe technical diagrams, tables, charts, formulas, "
-                    "screenshots, and page layout clearly for multimodal RAG search indexing."
+                    "You are creating visual metadata for a multimodal RAG system. "
+                    "Extract visible figure numbers, table numbers, equation numbers, captions, titles, labels, diagrams, charts, and page layout. "
+                    "Be precise and do not invent figure numbers that are not visible."
                 ),
             },
             {
@@ -57,7 +58,24 @@ def caption_image(image_bytes: bytes) -> str:
                 "content": [
                     {
                         "type": "text",
-                        "text": "Describe this PDF page for retrieval. Mention visible diagrams, tables, charts, equations, labels, and layout.",
+                        "text": (
+                            "Describe this PDF page for visual RAG indexing.\n\n"
+                            "Return structured Markdown with exactly these sections:\n\n"
+                            "### Figures\n"
+                            "- List every visible figure number such as Figure 1, Figure 2, Fig. 3, etc.\n"
+                            "- Include the figure title/caption if visible.\n"
+                            "- Describe what each figure shows.\n\n"
+                            "### Tables\n"
+                            "- List every visible table number such as Table 1, Table 2, etc.\n"
+                            "- Include the table title/caption if visible.\n\n"
+                            "### Equations\n"
+                            "- List every visible equation number such as Equation (1), (2), (3), etc.\n"
+                            "- Briefly describe what the equation represents.\n"
+                            "- If possible, rewrite visible equations in clean LaTeX.\n\n"
+                            "### Page Summary\n"
+                            "- Briefly summarize the page content for retrieval.\n\n"
+                            "Important: If a figure/table/equation number is visible, mention it explicitly."
+                        ),
                     },
                     {
                         "type": "image_url",
@@ -68,7 +86,7 @@ def caption_image(image_bytes: bytes) -> str:
                 ],
             },
         ],
-        temperature=0.2,
+        temperature=0.1,
     )
 
     return response.choices[0].message.content or ""

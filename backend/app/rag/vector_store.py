@@ -531,6 +531,41 @@ def search_chunks(
 
         merged = rrf_merge(vector_results, bm25_results)
 
+        visual_terms = [
+            "figure",
+            "fig.",
+            "fig ",
+            "diagram",
+            "image",
+            "architecture",
+            "chart",
+            "plot",
+            "table",
+            "equation",
+            "formula",
+            "visual",
+            "show me",
+        ]
+
+        query_lower = query.lower()
+
+        if any(term in query_lower for term in visual_terms):
+            print("👁️ VISUAL QUERY DETECTED — boosting figure chunks")
+
+            for item in merged:
+                if item.get("chunk_type") == "figure":
+                    item["rrf_score"] = float(item.get("rrf_score", 0)) + 0.05
+                    item["visual_boost"] = True
+
+            merged = sorted(
+                merged,
+                key=lambda x: x.get("rrf_score", 0),
+                reverse=True,
+            )
+
+        print("\n🔥 RRF RESULTS:", len(merged))
+        print("🔥 RERANKING ENABLED:", ENABLE_RERANKING)
+
         print("\n🔥 RRF RESULTS:", len(merged))
         print("🔥 RERANKING ENABLED:", ENABLE_RERANKING)
 

@@ -246,11 +246,26 @@ def build_context(results: dict, top_k: int = 8) -> str:
         text = normalize_math(text)
         filename = item.get("filename") or "uploaded_document"
         chunk_index = item.get("chunk_index")
+        chunk_type = item.get("chunk_type", "text")
+        page = item.get("page")
 
         context_parts.append(
-            f"[SOURCE {idx + 1} | {filename} | chunk {chunk_index}]\n{text}"
+            (
+                f"[SOURCE {idx + 1} | "
+                f"{filename} | "
+                f"chunk {chunk_index} | "
+                f"type={chunk_type} | "
+                f"page={page}]\n"
+                f"{text}"
+            )
         )
-
+    print("📚 CONTEXT SOURCES:")
+    for item in source_results[:top_k]:
+        print(
+            f"type={item.get('chunk_type')} "
+            f"page={item.get('page')} "
+            f"chunk={item.get('chunk_index')}"
+        )
     return "\n\n---\n\n".join(context_parts)
 
 
@@ -265,6 +280,11 @@ def build_messages(context: str, user_query: str):
                 "Do not use outside knowledge. "
                 "Use clean Markdown. "
                 "When possible, mention the source/chunk used. "
+                "If the question asks about a figure, diagram, image, architecture, chart, table, equation, or formula, prioritize information from sources marked type=figure. "
+
+                "If multiple sources are available and some are type=figure, use those visual sources before generic text sources when answering visual questions. "
+
+                "If a source explicitly mentions a figure number (Figure 1, Figure 2, Figure 3, etc.), use that source when answering questions about that figure. "
 
                 "For mathematical expressions, equations, formulas, and scientific notation, use valid LaTeX syntax. "
                 "For block equations, use $$ ... $$. "
