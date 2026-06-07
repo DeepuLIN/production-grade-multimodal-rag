@@ -243,7 +243,7 @@ def build_context(results: dict, top_k: int = 8) -> str:
 
         if not text:
             continue
-
+        text = normalize_math(text)
         filename = item.get("filename") or "uploaded_document"
         chunk_index = item.get("chunk_index")
 
@@ -265,10 +265,15 @@ def build_messages(context: str, user_query: str):
                 "Do not use outside knowledge. "
                 "Use clean Markdown. "
                 "When possible, mention the source/chunk used. "
+
                 "For mathematical expressions, equations, formulas, and scientific notation, use valid LaTeX syntax. "
                 "For block equations, use $$ ... $$. "
                 "For inline equations, use $ ... $. "
                 "Ensure mathematical notation is complete, properly escaped, and compatible with standard Markdown math renderers. "
+
+                "If mathematical notation appears corrupted, split across lines, or OCR-like, rewrite it as clean LaTeX. "
+                "Never output raw OCR-style math fragments. "
+                "Do not preserve broken line-by-line equation fragments. "
             ),
         },
         {
