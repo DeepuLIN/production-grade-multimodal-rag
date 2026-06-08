@@ -575,7 +575,49 @@ def search_chunks(
             ]
         )
 
-        if is_figure_query and not is_table_query:
+        is_equation_query = any(
+            term in query_lower
+            for term in [
+                "equation",
+                "eqation",
+                "formula",
+                "math",
+                "latex",
+                "loss",
+                "function",
+            ]
+        )
+
+        if is_equation_query:
+            print("EQUATION QUERY DETECTED. Boosting math/text chunks and penalizing visuals.")
+
+            for item in merged:
+                text = (item.get("text") or "").lower()
+                chunk_type = item.get("chunk_type")
+
+                if (
+                    "=" in text
+                    or "$" in text
+                    or "\\frac" in text
+                    or "\\sum" in text
+                    or "\\math" in text
+                    or "equation" in text
+                    or "formula" in text
+                ):
+                    item["rrf_score"] = float(item.get("rrf_score", 0)) + 0.4
+                    item["equation_boost"] = True
+
+                if chunk_type in ["figure", "image"]:
+                    item["rrf_score"] = float(item.get("rrf_score", 0)) - 0.25
+                    item["equation_visual_penalty"] = True
+
+            merged = sorted(
+                merged,
+                key=lambda x: x.get("rrf_score", 0),
+                reverse=True,
+            )
+
+        elif is_figure_query and not is_table_query:
             print("FIGURE QUERY DETECTED. Boosting figure and image chunks only.")
 
             for item in merged:

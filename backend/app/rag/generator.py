@@ -37,10 +37,14 @@ def generate_answer(question: str, contexts: List[Dict[str, Any]]) -> str:
                 "role": "system",
                 "content": (
                     "You are a precise document QA assistant.\n"
-                    "CRITICAL RULES:\n"
-                    "- NEVER output equations inside [ ]\n"
-                    "- Always use LaTeX: $...$ or $$...$$\n"
-                    "- Preserve math structure (fractions, matrices, symbols)\n"
+                    "STRICT RULES:\n"
+                    "- NEVER output equations in [ ]\n"
+                    "- ALWAYS use LaTeX\n"
+                    "- Preserve reading order\n"
+                    "- Preserve complete equations from beginning to end\n"
+                    "- If an equation spans multiple lines, combine it into one complete LaTeX block\n"
+                    "- Never leave dangling LaTeX delimiters such as \\left or \\right without brackets\n"
+                    "- Output structured Markdown only\n"
                 ),
             },
             {

@@ -70,12 +70,14 @@ async def extract_text_from_bytes(
         {
             "type": "text",
             "text": (
-                "Extract all visible text.\n"
-                "IMPORTANT:\n"
-                "- Convert ALL math into LaTeX ($...$ or $$...$$)\n"
-                "- Never use square brackets for equations\n"
-                "- Preserve structure (tables, headings, diagrams)\n"
-                "- Output clean Markdown only\n"
+               "IMPORTANT:\n"
+               "- Convert ALL math into LaTeX ($...$ or $$...$$)\n"
+               "- Never use square brackets for equations\n"
+               "- Preserve structure (tables, headings, diagrams)\n"
+               "- Preserve COMPLETE equations from beginning to end\n"
+               "- If an equation spans multiple lines, combine it into one complete LaTeX block\n"
+               "- Never leave dangling LaTeX delimiters such as \\left or \\right without brackets\n"
+               "- Output clean Markdown only\n"
             ),
         }
     ]
