@@ -1,3 +1,5 @@
+import re
+
 from app.extraction.ocr import extract_text_from_bytes
 from app.rag.image_pipeline import process_pdf_images
 from app.rag.chunker import chunk_text
@@ -6,6 +8,16 @@ from app.rag.text_cleaner import clean_ocr_text
 from app.rag.markdown_builder import build_markdown_document
 from app.rag.markdown_chunker import chunk_markdown
 from app.storage.s3 import upload_ocr_json
+from app.rag.document_summary import generate_document_summary, SUMMARY_MODEL
+
+
+def extract_page_from_chunk(chunk: str) -> int | None:
+    match = re.search(r"(?:###|##)\s*Page\s+(\d+)", chunk, flags=re.IGNORECASE)
+
+    if not match:
+        return None
+
+    return int(match.group(1))
 
 
 async def process_uploaded_document(
@@ -16,6 +28,7 @@ async def process_uploaded_document(
     user_id: str,
     clerk_user_id: str,
     project_id: str,
+    processing_mode: str = "auto",
 ):
     raw_text = await extract_text_from_bytes(
         file_bytes=file_bytes,
@@ -28,9 +41,18 @@ async def process_uploaded_document(
     if not cleaned_text_only:
         raise ValueError("OCR returned empty text.")
 
-    image_data = process_pdf_images(file_bytes, document_id)
+    caption_pages = processing_mode in ["auto", "visual_heavy", "handwritten"]
 
-    print(f"🖼️ VISUAL ITEMS FOUND: {len(image_data)}")
+    print("PROCESSING MODE:", processing_mode)
+    print("CAPTION PAGES:", caption_pages)
+
+    image_data = process_pdf_images(
+        pdf_bytes=file_bytes,
+        document_id=document_id,
+        caption_pages=caption_pages,
+    )
+
+    print(f"VISUAL ITEMS FOUND: {len(image_data)}")
 
     rag_text = build_markdown_document(
         filename=filename,
@@ -38,12 +60,36 @@ async def process_uploaded_document(
         image_data=image_data,
     )
 
+    document_summary = generate_document_summary(
+        text=rag_text,
+        filename=filename,
+    )
+
+    print(f"DOCUMENT SUMMARY CREATED | {document_summary[:120]}")
+
     text_chunks = chunk_markdown(rag_text)
 
-    chunks = [
-        {"chunk_type": "text", "text": chunk}
-        for chunk in text_chunks
-    ]
+    page_image_map = {
+        item.get("page"): item.get("image_s3_key")
+        for item in image_data
+        if item.get("chunk_type") == "figure"
+        and item.get("page") is not None
+        and item.get("image_s3_key")
+    }
+
+    chunks = []
+
+    for chunk in text_chunks:
+        page = extract_page_from_chunk(chunk)
+
+        chunks.append(
+            {
+                "chunk_type": "text",
+                "text": chunk,
+                "page": page,
+                "image_s3_key": page_image_map.get(page),
+            }
+        )
 
     figure_count = 0
     table_count = 0
@@ -55,7 +101,7 @@ async def process_uploaded_document(
             table_count += 1
 
             print(
-                f"📦 TABLE CHUNK CREATED | "
+                f"TABLE CHUNK CREATED | "
                 f"page={item.get('page')} | "
                 f"has_key={bool(item.get('image_s3_key'))}"
             )
@@ -65,7 +111,7 @@ async def process_uploaded_document(
                     "chunk_type": "table",
                     "text": (
                         f"Table source on page {item.get('page')}.\n"
-                        f"This is a table-level chunk extracted from the PDF.\n"
+                        f"This is a page-level table source extracted from the PDF.\n"
                         f"Use this chunk for questions about tables, rows, columns, values, comparisons, "
                         f"metrics, results, measurements, or tabular data.\n\n"
                         f"Table caption:\n{item.get('caption', '')}\n\n"
@@ -83,7 +129,7 @@ async def process_uploaded_document(
         figure_count += 1
 
         print(
-            f"📦 FIGURE CHUNK CREATED | "
+            f"FIGURE CHUNK CREATED | "
             f"page={item.get('page')} | "
             f"has_key={bool(item.get('image_s3_key'))}"
         )
@@ -104,9 +150,9 @@ async def process_uploaded_document(
             }
         )
 
-    print(f"📚 TOTAL CHUNKS: {len(chunks)}")
+    print(f"TOTAL CHUNKS: {len(chunks)}")
     print(
-        f"📚 TEXT CHUNKS: {len(text_chunks)} | "
+        f"TEXT CHUNKS: {len(text_chunks)} | "
         f"FIGURE CHUNKS: {figure_count} | "
         f"TABLE CHUNKS: {table_count}"
     )
@@ -122,6 +168,7 @@ async def process_uploaded_document(
             "filename": filename,
             "content_type": content_type,
             "image_data": image_data,
+            "document_summary": document_summary,
         },
     )
 
@@ -147,6 +194,9 @@ async def process_uploaded_document(
         "visual_items_found": len(image_data),
         "figures_found": figure_count,
         "tables_found": table_count,
+        "summary": document_summary,
+        "summary_model": SUMMARY_MODEL,
+        "extraction_method": processing_mode,
         "ocr_key": ocr_key,
     }
 
@@ -156,11 +206,6 @@ def process_document_text(
     text: str,
     metadata: dict | None = None,
 ):
-    """
-    TEXT → CHUNKS → QDRANT
-    Used for simple text ingestion.
-    """
-
     chunks = chunk_text(text)
 
     if not chunks:

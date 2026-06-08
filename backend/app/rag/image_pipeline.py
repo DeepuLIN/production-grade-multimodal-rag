@@ -120,14 +120,10 @@ def extract_pdf_tables(pdf_bytes: bytes, document_id: str):
                     rows = table.extract()
                     table_markdown = table_rows_to_markdown(rows)
 
-                    rect = fitz.Rect(table.bbox)
-
-                    pix = page.get_pixmap(
-                        clip=rect,
-                        dpi=200,
-                    )
-
+                    pix = page.get_pixmap(dpi=200)
                     table_bytes = pix.tobytes("png")
+
+                  
 
                     table_s3_key = upload_table_image_file(
                         document_id=document_id,
@@ -237,10 +233,28 @@ def caption_image(image_bytes: bytes) -> str:
 # -----------------------------
 # MAIN PIPELINE
 # -----------------------------
-def process_pdf_images(pdf_bytes: bytes, document_id: str):
-    pages = render_pages(pdf_bytes)
-
+def process_pdf_images(
+    pdf_bytes: bytes,
+    document_id: str,
+    caption_pages: bool = False,
+):
     results = []
+
+    # Always extract/crop tables cheaply with PyMuPDF
+    table_results = extract_pdf_tables(
+        pdf_bytes=pdf_bytes,
+        document_id=document_id,
+    )
+
+    print(f"📊 TABLES FOUND: {len(table_results)}")
+    results.extend(table_results)
+
+    # Skip expensive page-level LLM captioning by default
+    if not caption_pages:
+        print("⚡ Skipping page-level visual captions to reduce LLM cost")
+        return results
+
+    pages = render_pages(pdf_bytes)
 
     for image_index, p in enumerate(pages):
         try:
@@ -274,13 +288,8 @@ def process_pdf_images(pdf_bytes: bytes, document_id: str):
         except Exception as e:
             print("❌ vision error:", e)
 
-    table_results = extract_pdf_tables(
-        pdf_bytes=pdf_bytes,
-        document_id=document_id,
-    )
-
-    print(f"📊 TABLES FOUND: {len(table_results)}")
-
-    results.extend(table_results)
-
     return results
+
+
+
+    return int(match.group(1))

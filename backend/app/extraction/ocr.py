@@ -12,17 +12,59 @@ from app.core.config import (
 from app.rag.math_normalizer import normalize_math
 
 
+def extract_text_with_pymupdf(file_bytes: bytes) -> str:
+    pdf = fitz.open(stream=file_bytes, filetype="pdf")
+    pages = []
+
+    for page_index, page in enumerate(pdf):
+        if page_index >= MAX_PDF_PAGES:
+            break
+
+        text = page.get_text("text") or ""
+
+        if text.strip():
+            pages.append(f"\n\n## Page {page_index + 1}\n\n{text.strip()}")
+
+    pdf.close()
+    return "\n".join(pages).strip()
+
+
+def is_good_pdf_text(text: str) -> bool:
+    if not text:
+        return False
+
+    clean = text.strip()
+
+    if len(clean) < 500:
+        return False
+
+    alpha_count = sum(c.isalpha() for c in clean)
+    alpha_ratio = alpha_count / max(len(clean), 1)
+
+    return alpha_ratio > 0.25
+
+
 async def extract_text_from_bytes(
     file_bytes: bytes,
     filename: str,
     content_type: str,
 ) -> str:
+    if not file_bytes:
+        raise ValueError("No file bytes provided")
+
+    is_pdf = content_type == "application/pdf" or filename.lower().endswith(".pdf")
+
+    if is_pdf:
+        cheap_text = extract_text_with_pymupdf(file_bytes)
+
+        if is_good_pdf_text(cheap_text):
+            print("✅ Using cheap PyMuPDF text extraction")
+            return normalize_math(cheap_text)
+
+        print("⚠️ PyMuPDF text weak/empty. Falling back to LLM OCR.")
 
     if not OPEN_ROUTER_API_KEY:
         raise RuntimeError("OPEN_ROUTER_API_KEY is missing")
-
-    if not file_bytes:
-        raise ValueError("No file bytes provided")
 
     content_items = [
         {
@@ -38,8 +80,7 @@ async def extract_text_from_bytes(
         }
     ]
 
-    # PDF handling
-    if content_type == "application/pdf" or filename.lower().endswith(".pdf"):
+    if is_pdf:
         pdf = fitz.open(stream=file_bytes, filetype="pdf")
 
         for page_index, page in enumerate(pdf):
@@ -61,7 +102,6 @@ async def extract_text_from_bytes(
 
         pdf.close()
 
-    # image handling
     else:
         safe_content_type = content_type or "image/jpeg"
         image_base64 = base64.b64encode(file_bytes).decode("utf-8")
@@ -105,8 +145,4 @@ async def extract_text_from_bytes(
     )
 
     output = response.choices[0].message.content or ""
-
-    # 🔥 FINAL NORMALIZATION
-    output = normalize_math(output)
-
-    return output
+    return normalize_math(output)

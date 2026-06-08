@@ -73,6 +73,7 @@ def api_status():
 async def upload_document(
     file: UploadFile = File(...),
     project_id: str | None = Form(None),
+    processing_mode: str = Form("auto"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -149,12 +150,20 @@ async def upload_document(
             user_id=current_user.id,
             clerk_user_id=current_user.clerk_user_id,
             project_id=project.id,
+            processing_mode=processing_mode,
         )
 
         crud.update_document_storage(
             db=db,
             document_id=document_id,
             s3_ocr_path=result["ocr_key"],
+        )
+        crud.update_document_summary(
+            db=db,
+            document_id=document_id,
+            summary=result.get("summary"),
+            summary_model=result.get("summary_model"),
+            extraction_method=result.get("extraction_method"),
         )
 
         crud.update_document_status(
@@ -187,6 +196,12 @@ async def upload_document(
                 "visual_items_found": result.get("visual_items_found", 0),
                 "figures_found": result.get("figures_found", 0),
                 "tables_found": result.get("tables_found", 0),
+            },
+
+            "document_summary": {
+                "summary": result.get("summary"),
+                "summary_model": result.get("summary_model"),
+                "extraction_method": result.get("extraction_method"),
             },
             "storage": {
                 "saved": True,

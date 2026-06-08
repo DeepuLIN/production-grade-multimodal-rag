@@ -110,6 +110,7 @@ function MultimodalRAGApp() {
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [creatingProject, setCreatingProject] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [processingMode, setProcessingMode] = useState("auto");
   const [uploadStatus, setUploadStatus] = useState("");
   const [asking, setAsking] = useState(false);
   const [deletingId, setDeletingId] = useState("");
@@ -313,6 +314,8 @@ function MultimodalRAGApp() {
       formData.append("project_id", selectedProjectId);
     }
 
+    formData.append("processing_mode", processingMode);
+
     setUploadStatus(`Uploading ${index + 1}/${total}: ${file.name}`);
 
     const res = await fetch(`${API_BASE}/api`, {
@@ -402,6 +405,82 @@ function MultimodalRAGApp() {
       setDeletingId("");
     }
   }
+
+
+  async function handleProjectSummary() {
+    if (!selectedProjectId) return;
+
+    setAsking(true);
+    setAnswer("");
+    setMatches([]);
+    setSelectedMatch("all");
+
+    try {
+      const headers = await authHeaders(true);
+
+      const res = await fetch(`${API_BASE}/ask`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          query: "summarize all papers in this project",
+          question: "summarize all papers in this project",
+          top_k: 5,
+          project_id: selectedProjectId,
+          document_id: "all",
+          rewrite: false,
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const data = await res.json();
+
+      setAnswer(data.answer || "No project summary generated.");
+      setMatches(data.top_matches || []);
+    } catch (error) {
+      setAnswer(`Error: ${String(error)}`);
+    } finally {
+      setAsking(false);
+    }
+  }
+
+
+async function handleComparePapers() {
+  if (!selectedProjectId) return;
+
+  setAsking(true);
+  setAnswer("");
+  setMatches([]);
+  setSelectedMatch("all");
+
+  try {
+    const headers = await authHeaders(true);
+
+    const res = await fetch(`${API_BASE}/ask`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        query: "compare all papers in this project",
+        question: "compare all papers in this project",
+        top_k: 5,
+        project_id: selectedProjectId,
+        document_id: "all",
+        rewrite: false,
+      }),
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+
+    const data = await res.json();
+
+    setAnswer(data.answer || "No comparison generated.");
+    setMatches(data.top_matches || []);
+  } catch (error) {
+    setAnswer(`Error: ${String(error)}`);
+  } finally {
+    setAsking(false);
+  }
+}
 
   async function handleAsk() {
     if (!question.trim()) return;
@@ -567,8 +646,25 @@ function MultimodalRAGApp() {
               +
             </button>
           </div>
-
+          
           <div className="mb-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4">
+
+            <label className="mb-2 block text-xs font-bold text-slate-600">
+              Processing mode
+            </label>
+
+            <select
+              value={processingMode}
+              onChange={(e) => setProcessingMode(e.target.value)}
+              className="mb-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:ring-4 focus:ring-slate-200"
+            >
+              <option value="auto">Auto detect</option>
+              <option value="pdf_text">Text PDF / Research paper</option>
+              <option value="scanned_pdf">Scanned PDF / OCR</option>
+              <option value="handwritten">Handwritten notes / image</option>
+              <option value="visual_heavy">Visual-heavy document</option>
+            </select>
+
             <input
               id="multi-upload"
               type="file"
@@ -903,7 +999,7 @@ function MultimodalRAGApp() {
                 )}
               </div>
             </section>
-          </div>
+          </div>SK 
 
           <section className="rounded-[2rem] border border-white/70 bg-white/75 p-6 shadow-2xl shadow-slate-200/70 backdrop-blur-xl">
             <h2 className="mb-5 text-2xl font-bold text-slate-900">
@@ -936,7 +1032,25 @@ function MultimodalRAGApp() {
                 className="rounded-2xl border border-slate-300 bg-white px-5 py-4 text-slate-700 outline-none focus:ring-4 focus:ring-slate-200"
               />
             </div>
+            <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={handleProjectSummary}
+                disabled={!selectedProjectId || asking}
+                className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:scale-[1.01] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                📄 Summarize Project
+              </button>
 
+              <button
+                type="button"
+                onClick={handleComparePapers}
+                disabled={!selectedProjectId || asking}
+                className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:scale-[1.01] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Compare Documents
+              </button>
+            </div>
             <button
               title="Search your filtered Qdrant chunks and stream an answer"
               onClick={handleAsk}

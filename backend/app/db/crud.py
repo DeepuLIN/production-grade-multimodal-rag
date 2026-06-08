@@ -246,3 +246,62 @@ def delete_project_for_user(
     db.commit()
 
     return project
+
+
+def update_document_summary(
+    db: Session,
+    document_id: str,
+    summary: str | None = None,
+    summary_model: str | None = None,
+    extraction_method: str | None = None,
+) -> models.Document | None:
+    document = (
+        db.query(models.Document)
+        .filter(models.Document.id == document_id)
+        .first()
+    )
+
+    if not document:
+        return None
+
+    if summary is not None:
+        document.summary = summary
+
+    if summary_model is not None:
+        document.summary_model = summary_model
+
+    if extraction_method is not None:
+        document.extraction_method = extraction_method
+
+    db.commit()
+    db.refresh(document)
+
+    return document
+
+def get_project_document_summaries(
+    db: Session,
+    user_id: str,
+    project_id: str,
+) -> list[dict]:
+    documents = (
+        db.query(models.Document)
+        .filter(
+            models.Document.user_id == user_id,
+            models.Document.project_id == project_id,
+            models.Document.status == "completed",
+            models.Document.summary.isnot(None),
+        )
+        .order_by(models.Document.created_at.asc())
+        .all()
+    )
+
+    return [
+        {
+            "document_id": doc.id,
+            "filename": doc.filename,
+            "summary": doc.summary,
+            "summary_model": doc.summary_model,
+            "extraction_method": doc.extraction_method,
+        }
+        for doc in documents
+    ]

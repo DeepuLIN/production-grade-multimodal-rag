@@ -39,6 +39,9 @@ class DocumentCreate(BaseModel):
     s3_ocr_path: str | None = None
     status: str = "processing"
     error_message: str | None = None
+    summary: str | None = None
+    summary_model: str | None = None
+    extraction_method: str | None = None
 
 
 class DocumentOut(BaseModel):
@@ -54,3 +57,6 @@ class DocumentOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+    summary: str | None = None
+    summary_model: str | None = None
+    extraction_method: str | None = None

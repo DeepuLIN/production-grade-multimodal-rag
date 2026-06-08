@@ -10,6 +10,10 @@ from app.core.config import CHAT_MODEL
 from app.auth.clerk import get_current_user
 from app.db import models
 from app.storage.s3 import get_presigned_url
+from app.db.database import get_db
+from sqlalchemy.orm import Session
+from app.db import crud
+from app.rag.document_summary import generate_cross_document_summary
 
 router = APIRouter()
 
@@ -280,9 +284,9 @@ def build_messages(context: str, user_query: str):
                 "Do not use outside knowledge. "
                 "Use clean Markdown. "
                 "When possible, mention the source/chunk used. "
-                "If the question asks about a figure, diagram, image, architecture, chart, table, equation, or formula, prioritize information from sources marked type=figure. "
+                
 
-                "If the question asks about a figure, diagram, image, architecture, chart, table, equation, or formula, prioritize information from sources marked type=figure or type=table. "
+                "If the question asks about a figure, diagram, image, architecture, chart, table, equation, or formula, first use sources marked type=figure or type=table if available. If no visual/table source is available, use text sources that explicitly mention the requested figure, table, equation, or caption. "
 
                 "If multiple sources are available and some are type=figure or type=table, use those visual/table sources before generic text sources when answering visual questions. "
 
@@ -315,6 +319,7 @@ Answer clearly and concisely.
 def ask(
     req: AskRequest,
     current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     try:
         user_query = req.query or req.question
@@ -332,6 +337,42 @@ def ask(
 
         client = get_client()
         rewritten_query = get_search_query(client, user_query, rewrite=req.rewrite)
+        
+        if req.project_id and not document_id and is_project_summary_or_comparison_query(user_query):
+            summaries = crud.get_project_document_summaries(
+                db=db,
+                user_id=current_user.id,
+                project_id=req.project_id,
+            )
+
+            if not summaries:
+                return AskResponse(
+                    query=user_query,
+                    rewritten_query=rewritten_query,
+                    answer="No document summaries found for this project. Please upload or re-upload documents first.",
+                    top_matches=[],
+                    sources={"document_summaries": []},
+                    filters={
+                        "user_id": current_user.id,
+                        "project_id": req.project_id,
+                        "document_id": document_id,
+                    },
+                )
+
+            answer = generate_cross_document_summary(summaries)
+
+            return AskResponse(
+                query=user_query,
+                rewritten_query=rewritten_query,
+                answer=normalize_math(answer),
+                top_matches=[],
+                sources={"document_summaries": summaries},
+                filters={
+                    "user_id": current_user.id,
+                    "project_id": req.project_id,
+                    "document_id": document_id,
+                },
+            )
 
         print("🔥 SEARCH QUERY:", rewritten_query)
 
@@ -427,7 +468,7 @@ def ask_stream(
                 rewritten_query,
                 top_k=max(req.top_k, 8),
                 user_id=current_user.id,
-                project_id=req.project_id,
+                project_id=None if document_id else req.project_id,
                 document_id=document_id,
             )
 
@@ -493,3 +534,25 @@ def ask_stream(
             "Connection": "keep-alive",
         },
     )
+
+def is_project_summary_or_comparison_query(query: str) -> bool:
+    q = query.lower()
+
+    triggers = [
+        "summarize all papers",
+        "summarise all papers",
+        "summarize all documents",
+        "summarise all documents",
+        "summarize all pdfs",
+        "compare all papers",
+        "compare all documents",
+        "compare these papers",
+        "cross document",
+        "cross-document",
+        "literature review",
+        "project summary",
+        "all papers in this project",
+        "all documents in this project",
+    ]
+
+    return any(t in q for t in triggers)

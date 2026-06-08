@@ -47,52 +47,61 @@ This project extends the architecture into a production-oriented multimodal plat
 
 ## Document Ingestion
 
-* PDF Upload
-* Image Upload
-* OCR Extraction
-* Metadata Extraction
-* Markdown Generation
-* Document Storage
+- PDF Upload
+- Image Upload
+- Scanned Document Support
+- Handwritten Note Support
+- OCR Text Extraction
+- Markdown Conversion
+- Metadata Storage
+- Amazon S3 Storage
+- Project-Level Isolation
 
 ## Multimodal Understanding
 
-* OCR for scanned PDFs
-* Image Caption Generation
-* Visual Content Processing
-* Markdown-based document representation
+- OCR for scanned PDFs
+- Diagram-Aware OCR
+- Image Caption Generation
+- Visual Content Processing
+- Markdown-Based Document Representation
+- Visual Chunk Creation
+- Page-Level Visual Preview
 
 ## Retrieval Pipeline
 
-* Amazon Titan Embedding Search
-* BM25 Keyword Search
-* Hybrid Retrieval
-* Reciprocal Rank Fusion (RRF)
-* Query Rewriting
-* Cross-Encoder Reranking
-* Metadata Filtering
-* Project-Level Isolation
-* Retrieval Inspector
-* Source Attribution
+- Amazon Titan Embedding Search
+- Qdrant Vector Search
+- BM25 Keyword Search
+- Hybrid Retrieval
+- Reciprocal Rank Fusion (RRF)
+- Query Rewriting
+- Cross-Encoder Reranking
+- Candidate Pool Expansion
+- Metadata Filtering
+- Retrieval Inspector
+- Source Attribution
+- Visual Source Attribution
 
 ## Authentication & Security
 
-* Clerk Authentication
-* JWT Validation
-* User Isolation
-* Project Isolation
-* Upload Validation
-* Secure Cloud Storage
+- Clerk Authentication
+- JWT Validation
+- User Isolation
+- Project Isolation
+- Upload Validation
+- Secure Cloud Storage
+- Production CORS Configuration
 
 ## Production Infrastructure
 
-* Dockerized Deployment
-* AWS Lambda Containers
-* AWS ECR
-* Amazon S3
-* PostgreSQL Metadata Layer
-* Qdrant Vector Database
-* Health Monitoring Endpoints
-
+- Dockerized Deployment
+- AWS Lambda Containers
+- AWS ECR
+- Amazon S3
+- Neon PostgreSQL
+- Qdrant Vector Database
+- Vercel Frontend
+- Health Monitoring Endpoints
 ---
 
 # System Architecture
@@ -190,23 +199,23 @@ PostgreSQL (metadata)                     Amazon S3 (raw files)
 The retrieval system follows a modern production-grade architecture rather than relying solely on vector similarity search.
 
 ```text
-Query
-  ↓
 Query Rewriting
-  ↓
+ ↓
 Vector Search (Titan + Qdrant)
       +
 BM25 Retrieval
-  ↓
+ ↓
 Reciprocal Rank Fusion (RRF)
-  ↓
+ ↓
 Candidate Pool Generation
-  ↓
+ ↓
 Cross-Encoder Reranking
-  ↓
+ ↓
 Context Assembly
-  ↓
+ ↓
 LLM Generation
+ ↓
+Streaming Response
 ```
 
 This design combines semantic retrieval, lexical retrieval, rank fusion, and neural reranking to improve retrieval precision and answer grounding across long and complex documents.

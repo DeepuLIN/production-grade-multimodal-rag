@@ -169,3 +169,18 @@ class Document(Base):
         "Project",
         back_populates="documents",
     )
+
+    summary: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    summary_model: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )
+
+    extraction_method: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )

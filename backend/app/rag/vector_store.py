@@ -440,9 +440,9 @@ def search_chunks(
 
         candidate_k = max(top_k * 4, 20)
 
-        print("🔥 SEARCH QUERY:", query)
-        print("🔥 TOP_K:", top_k)
-        print("🔥 CANDIDATE_K:", candidate_k)
+        print("SEARCH QUERY:", query)
+        print("TOP_K:", top_k)
+        print("CANDIDATE_K:", candidate_k)
 
         qdrant_filter = build_qdrant_filter(
             user_id=user_id,
@@ -477,8 +477,6 @@ def search_chunks(
                     "user_id": payload.get("user_id"),
                     "filename": payload.get("filename"),
                     "chunk_index": payload.get("chunk_index"),
-
-                    # V2 fields
                     "chunk_type": payload.get("chunk_type", "text"),
                     "caption": payload.get("caption"),
                     "page": payload.get("page"),
@@ -487,11 +485,11 @@ def search_chunks(
                 }
             )
 
-        print("🔥 BM25 TOTAL ITEMS BEFORE SEARCH:", len(bm25_index.items))
-        print("🔥 BM25 INDEX EXISTS BEFORE SEARCH:", bm25_index.bm25 is not None)
+        print("BM25 TOTAL ITEMS BEFORE SEARCH:", len(bm25_index.items))
+        print("BM25 INDEX EXISTS BEFORE SEARCH:", bm25_index.bm25 is not None)
 
         if not bm25_index.bm25 or len(bm25_index.items) == 0:
-            print("⚠️ BM25 empty. Rebuilding from Qdrant...")
+            print("BM25 empty. Rebuilding from Qdrant...")
             rebuild_bm25_from_qdrant(
                 client=client,
                 user_id=user_id,
@@ -499,8 +497,8 @@ def search_chunks(
                 document_id=document_id,
             )
 
-        print("🔥 BM25 TOTAL ITEMS AFTER REBUILD CHECK:", len(bm25_index.items))
-        print("🔥 BM25 INDEX EXISTS AFTER REBUILD CHECK:", bm25_index.bm25 is not None)
+        print("BM25 TOTAL ITEMS AFTER REBUILD CHECK:", len(bm25_index.items))
+        print("BM25 INDEX EXISTS AFTER REBUILD CHECK:", bm25_index.bm25 is not None)
 
         bm25_results = bm25_index.search(
             query=query,
@@ -510,50 +508,108 @@ def search_chunks(
             document_id=document_id,
         )
 
-        print("\n🔥 VECTOR RESULTS:", len(vector_results))
-        print("🔥 BM25 RESULTS:", len(bm25_results))
-        print("🔥 FILTER USER:", user_id)
-        print("🔥 FILTER PROJECT:", project_id)
-        print("🔥 FILTER DOCUMENT:", document_id)
+        print("VECTOR RESULTS:", len(vector_results))
+        print("BM25 RESULTS:", len(bm25_results))
+        print("FILTER USER:", user_id)
+        print("FILTER PROJECT:", project_id)
+        print("FILTER DOCUMENT:", document_id)
 
         if vector_results:
-            print("🔥 FIRST VECTOR DOC:", vector_results[0].get("document_id"))
-            print("🔥 FIRST VECTOR FILE:", vector_results[0].get("filename"))
-            print("🔥 FIRST VECTOR TEXT:", vector_results[0].get("text", "")[:200])
+            first_text = vector_results[0].get("text") or ""
+            print("FIRST VECTOR DOC:", vector_results[0].get("document_id"))
+            print("FIRST VECTOR FILE:", vector_results[0].get("filename"))
+            print("FIRST VECTOR TEXT:", first_text[:200])
 
         if bm25_results:
-            print("🔥 FIRST BM25 DOC:", bm25_results[0].get("document_id"))
-            print("🔥 FIRST BM25 FILE:", bm25_results[0].get("filename"))
-            print("🔥 FIRST BM25 TEXT:", bm25_results[0].get("text", "")[:200])
+            first_text = bm25_results[0].get("text") or ""
+            print("FIRST BM25 DOC:", bm25_results[0].get("document_id"))
+            print("FIRST BM25 FILE:", bm25_results[0].get("filename"))
+            print("FIRST BM25 TEXT:", first_text[:200])
 
         vector_results = [v for v in vector_results if v.get("text")]
         bm25_results = [b for b in bm25_results if b.get("text")]
 
         merged = rrf_merge(vector_results, bm25_results)
 
-        visual_terms = [
-            "figure",
-            "fig.",
-            "fig ",
-            "diagram",
-            "image",
-            "architecture",
-            "chart",
-            "plot",
-            "table",
-            "equation",
-            "formula",
-            "visual",
-            "show me",
-        ]
-
         query_lower = query.lower()
 
-        if any(term in query_lower for term in visual_terms):
-            print("👁️ VISUAL/TABLE QUERY DETECTED — boosting figure and table chunks")
+        is_figure_query = any(
+            term in query_lower
+            for term in [
+                "figure",
+                "fig.",
+                "fig ",
+                "image",
+                "diagram",
+                "picture",
+                "chart",
+                "plot",
+                "visual",
+                "show me",
+            ]
+        )
+
+        is_table_query = any(
+            term in query_lower
+            for term in [
+                "table",
+                "row",
+                "rows",
+                "column",
+                "columns",
+                "tabular",
+                "cell",
+                "cells",
+            ]
+        )
+
+        if is_figure_query and not is_table_query:
+            print("FIGURE QUERY DETECTED. Boosting figure and image chunks only.")
 
             for item in merged:
-                if item.get("chunk_type") in ["figure", "table"]:
+                chunk_type = item.get("chunk_type")
+
+                if chunk_type in ["figure", "image"]:
+                    item["rrf_score"] = float(item.get("rrf_score", 0)) + 0.15
+                    item["visual_boost"] = True
+
+                elif chunk_type == "table":
+                    item["rrf_score"] = float(item.get("rrf_score", 0)) - 0.15
+                    item["table_penalty"] = True
+
+            merged = sorted(
+                merged,
+                key=lambda x: x.get("rrf_score", 0),
+                reverse=True,
+            )
+
+        elif is_table_query and not is_figure_query:
+            print("TABLE QUERY DETECTED. Boosting table chunks only.")
+
+            for item in merged:
+                chunk_type = item.get("chunk_type")
+
+                if chunk_type == "table":
+                    item["rrf_score"] = float(item.get("rrf_score", 0)) + 0.15
+                    item["table_boost"] = True
+
+                elif chunk_type in ["figure", "image"]:
+                    item["rrf_score"] = float(item.get("rrf_score", 0)) - 0.05
+                    item["image_penalty"] = True
+
+            merged = sorted(
+                merged,
+                key=lambda x: x.get("rrf_score", 0),
+                reverse=True,
+            )
+
+        elif is_figure_query and is_table_query:
+            print("MIXED VISUAL QUERY DETECTED. Keeping both figure/image and table chunks.")
+
+            for item in merged:
+                chunk_type = item.get("chunk_type")
+
+                if chunk_type in ["figure", "image", "table"]:
                     item["rrf_score"] = float(item.get("rrf_score", 0)) + 0.05
                     item["visual_boost"] = True
 
@@ -563,14 +619,12 @@ def search_chunks(
                 reverse=True,
             )
 
-        print("\n🔥 RRF RESULTS:", len(merged))
-        print("🔥 RERANKING ENABLED:", ENABLE_RERANKING)
-
-        print("\n🔥 RRF RESULTS:", len(merged))
-        print("🔥 RERANKING ENABLED:", ENABLE_RERANKING)
+        print("RRF RESULTS:", len(merged))
+        print("RERANKING ENABLED:", ENABLE_RERANKING)
 
         if merged:
-            print("🔥 FIRST RRF TEXT:", merged[0].get("text", "")[:200])
+            first_text = merged[0].get("text") or ""
+            print("FIRST RRF TEXT:", first_text[:200])
 
         if ENABLE_RERANKING:
             final_results = rerank_chunks(
@@ -579,35 +633,30 @@ def search_chunks(
                 top_k=top_k,
             )
 
-            
-
             final_results = final_results[:top_k]
+
             for i, r in enumerate(final_results[:5]):
                 print(
-                    f"🏆 FINAL RESULT {i+1} | "
+                    f"FINAL RESULT {i + 1} | "
                     f"type={r.get('chunk_type')} | "
                     f"page={r.get('page')} | "
                     f"has_image={bool(r.get('image_s3_key'))}"
                 )
 
-            print("🔥 FINAL RESULTS AFTER RERANK:", len(final_results))
+            print("FINAL RESULTS AFTER RERANK:", len(final_results))
 
             if final_results:
-                print(
-                    "🔥 FIRST RERANKED CHUNK:",
-                    final_results[0].get("text", "")[:200],
-                )
-                print(
-                    "🔥 FIRST RERANK RANK:",
-                    final_results[0].get("rerank_rank"),
-                )
+                first_text = final_results[0].get("text") or ""
+                print("FIRST RERANKED CHUNK:", first_text[:200])
+                print("FIRST RERANK RANK:", final_results[0].get("rerank_rank"))
+
         else:
             final_results = merged[:top_k]
-            print("⚠️ RERANKING DISABLED, USING RRF ONLY")
+            print("RERANKING DISABLED. USING RRF ONLY.")
 
             for i, r in enumerate(final_results[:5]):
                 print(
-                    f"🏆 FINAL RESULT {i+1} | "
+                    f"FINAL RESULT {i + 1} | "
                     f"type={r.get('chunk_type')} | "
                     f"page={r.get('page')} | "
                     f"has_image={bool(r.get('image_s3_key'))}"
@@ -627,7 +676,7 @@ def search_chunks(
         }
 
     except Exception as e:
-        print("❌ SEARCH FAILED:", str(e))
+        print("SEARCH FAILED:", str(e))
         return {
             "merged_results": [],
             "vector_results": [],
