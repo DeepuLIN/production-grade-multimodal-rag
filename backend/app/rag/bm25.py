@@ -78,6 +78,7 @@ class BM25Index:
                 "page": metadata.get("page"),
                 "image_s3_key": metadata.get("image_s3_key"),
                 "table_markdown": metadata.get("table_markdown"),
+                "figure_number": metadata.get("figure_number"),
             })
 
         results.sort(key=lambda x: x["bm25_score"], reverse=True)

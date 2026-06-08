@@ -14,7 +14,7 @@ from qdrant_client.models import (
     PayloadSchemaType,
     FilterSelector,
 )
-
+import re
 from app.rag.embeddings import embed_texts
 from app.core.config import ENABLE_RERANKING, RERANK_MODEL
 from app.rag.reranker import rerank_chunks
@@ -141,6 +141,7 @@ def upsert_chunks(
                         "page": chunk.get("page"),
                         "image_s3_key": chunk.get("image_s3_key"),
                         "table_markdown": chunk.get("table_markdown"),
+                        "figure_number": chunk.get("figure_number"),
                     }
 
 
@@ -149,7 +150,8 @@ def upsert_chunks(
                 print(
                     f"💾 UPSERT CHUNK | "
                     f"type={chunk.get('chunk_type')} | "
-                    f"page={chunk.get('page')}"
+                    f"page={chunk.get('page')}| "
+                    f"figure_number={chunk.get('figure_number')}"
                 )
 
 
@@ -168,6 +170,7 @@ def upsert_chunks(
                         "page": None,
                         "image_s3_key": None,
                         "table_markdown": None,
+                        "figure_number": None,
                     }
                 )
 
@@ -207,6 +210,7 @@ def upsert_chunks(
                 "page": chunk.get("page"),
                 "image_s3_key": chunk.get("image_s3_key"),
                 "table_markdown": chunk.get("table_markdown"),
+                "figure_number": chunk.get("figure_number"),
             }
 
             points.append(
@@ -241,6 +245,7 @@ def upsert_chunks(
                         "page": chunk.get("page"),
                         "image_s3_key": chunk.get("image_s3_key"),
                         "table_markdown": chunk.get("table_markdown"),
+                        "figure_number": chunk.get("figure_number"),
                     },
                 }
             )
@@ -415,7 +420,7 @@ def rebuild_bm25_from_qdrant(
                     "page": payload.get("page"),
                     "image_s3_key": payload.get("image_s3_key"),
                     "table_markdown": payload.get("table_markdown"),
-                
+                    "figure_number": payload.get("figure_number"),
                 },
             }
         )
@@ -482,6 +487,7 @@ def search_chunks(
                     "page": payload.get("page"),
                     "image_s3_key": payload.get("image_s3_key"),
                     "table_markdown": payload.get("table_markdown"),
+                    "figure_number": payload.get("figure_number"),
                 }
             )
 
@@ -532,6 +538,12 @@ def search_chunks(
         merged = rrf_merge(vector_results, bm25_results)
 
         query_lower = query.lower()
+        figure_number_match = re.search(
+            r"(?:figure|fig\.?|image)\s*(\d+)",
+            query_lower,
+        )
+
+        target_figure_number = figure_number_match.group(1) if figure_number_match else None
 
         is_figure_query = any(
             term in query_lower
@@ -576,6 +588,16 @@ def search_chunks(
                 elif chunk_type == "table":
                     item["rrf_score"] = float(item.get("rrf_score", 0)) - 0.15
                     item["table_penalty"] = True
+
+                if target_figure_number:
+                    item_figure_number = item.get("figure_number")
+
+                    if (
+                        item_figure_number is not None
+                        and str(item_figure_number) == str(target_figure_number)
+                    ):
+                        item["rrf_score"] = float(item.get("rrf_score", 0)) + 1.0
+                        item["exact_figure_match"] = True
 
             merged = sorted(
                 merged,

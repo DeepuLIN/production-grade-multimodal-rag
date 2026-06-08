@@ -13,6 +13,92 @@ client = OpenAI(
 )
 
 
+def extract_embedded_pdf_images(pdf_bytes: bytes, document_id: str):
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+    results = []
+    image_index = 0
+
+    for page_index in range(len(doc)):
+        page = doc[page_index]
+        page_number = page_index + 1
+
+        images = page.get_images(full=True)
+
+        if not images:
+            continue
+
+        # Store one page preview only if the page contains real embedded images.
+        pix = page.get_pixmap(dpi=200)
+        image_bytes = pix.tobytes("png")
+
+        image_s3_key = upload_image_file(
+            document_id=document_id,
+            page=page_number,
+            image_index=image_index,
+            file_bytes=image_bytes,
+        )
+
+        image_index += 1
+
+        page_text = page.get_text("text") or ""
+
+        caption = (
+            f"Page {page_number} contains {len(images)} embedded image(s)/figure(s).\n\n"
+            f"Visible/nearby page text:\n{page_text[:1200]}"
+        )
+
+        figure_number = extract_figure_number(page_text)
+
+        print(
+            f"🖼️ EMBEDDED IMAGE PAGE STORED | "
+            f"page={page_number} | "
+            f"embedded_images={len(images)} | "
+            f"key={image_s3_key}"
+        )
+
+        results.append(
+            {
+                "caption": caption,
+                "page": page_number,
+                "image_s3_key": image_s3_key,
+                "chunk_type": "figure",
+                "figure_number": figure_number,
+            }
+        )
+
+    doc.close()
+    return results
+
+
+
+
+def extract_figure_number(caption: str | None) -> int | None:
+    if not caption:
+        return None
+
+    lowered = caption.lower()
+
+    if (
+        "not visible" in lowered
+        or "no visible figure" in lowered
+        or "no visible figures" in lowered
+    ):
+        return None
+
+    match = re.search(
+        r"\b(?:Figure|Fig\.?)\s*(\d+)\b",
+        caption,
+        flags=re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    return int(match.group(1))
+
+
+
 # -----------------------------
 # RENDER PAGE AS IMAGE
 # -----------------------------
@@ -251,7 +337,14 @@ def process_pdf_images(
 
     # Skip expensive page-level LLM captioning by default
     if not caption_pages:
-        print("⚡ Skipping page-level visual captions to reduce LLM cost")
+        embedded_image_results = extract_embedded_pdf_images(
+            pdf_bytes=pdf_bytes,
+            document_id=document_id,
+        )
+
+        print(f"🖼️ EMBEDDED IMAGE PAGES FOUND: {len(embedded_image_results)}")
+
+        results.extend(embedded_image_results)
         return results
 
     pages = render_pages(pdf_bytes)
@@ -275,13 +368,14 @@ def process_pdf_images(
                 f"📝 IMAGE CAPTION | page={p['page']} | "
                 f"{(caption or '')[:120]}"
             )
-
+            figure_number = extract_figure_number(caption)
             results.append(
                 {
                     "caption": caption or "",
                     "page": p["page"],
                     "image_s3_key": image_s3_key,
                     "chunk_type": "figure",
+                    "figure_number": figure_number,
                 }
             )
 
@@ -292,4 +386,3 @@ def process_pdf_images(
 
 
 
-    return int(match.group(1))

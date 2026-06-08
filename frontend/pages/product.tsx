@@ -46,7 +46,7 @@ type Match = {
   project_id?: string;
   chunk_index?: number | null;
 
-  chunk_type?: "text" | "figure" | "table";
+  chunk_type?: "text" | "figure" | "image" | "table";
   caption?: string | null;
   image_s3_key?: string | null;
   image_url?: string | null;
@@ -562,9 +562,10 @@ async function handleComparePapers() {
 
   const firstImageMatch = matches.find(
     (match) =>
-      match.chunk_type === "figure" &&
+      (match.chunk_type === "figure" || match.chunk_type === "image") &&
       match.image_url
   );
+  
   const firstTableMatch = matches.find(
     (match) =>
       match.chunk_type === "table" &&
@@ -873,11 +874,12 @@ async function handleComparePapers() {
                         </p>
                       </div>
                     </div>
-                    {selectedMatchObject.chunk_type === "figure" &&
+                    {(selectedMatchObject.chunk_type === "figure" ||
+                      selectedMatchObject.chunk_type === "image") &&
                       selectedMatchObject.image_url && (
                         <img
                           src={selectedMatchObject.image_url}
-                          alt={selectedMatchObject.caption || "Retrieved figure"}
+                          alt={selectedMatchObject.caption || "Retrieved visual source"}
                           className="mb-4 max-h-[420px] w-full rounded-2xl border border-slate-200 object-contain"
                         />
                       )}
@@ -890,26 +892,11 @@ async function handleComparePapers() {
                           </ReactMarkdown>
                         </div>
                       )}
+
                     <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
                       {selectedMatchObject.text}
                     </p>
-                    {selectedMatchObject.chunk_type === "figure" &&
-                      selectedMatchObject.image_url && (
-                        <img
-                          src={selectedMatchObject.image_url}
-                          alt={selectedMatchObject.caption || "Retrieved figure"}
-                          className="mt-4 max-h-[420px] w-full rounded-2xl border border-slate-200 object-contain"
-                        />
-                      )}
-
-                    {selectedMatchObject.chunk_type === "table" &&
-                      selectedMatchObject.table_markdown && (
-                        <div className="prose prose-sm mt-4 max-w-none overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {selectedMatchObject.table_markdown}
-                          </ReactMarkdown>
-                        </div>
-                      )}
+                    
 
 
 
@@ -967,13 +954,14 @@ async function handleComparePapers() {
                             </p>
                           </div>
                         </div>
-                        {match.chunk_type === "figure" && (
+                        {(match.chunk_type === "figure" || match.chunk_type === "image") && ( 
                           <p className="mb-2 text-xs font-bold text-emerald-700">
-                            Figure source detected · image_url: {match.image_url ? "yes" : "no"}
+                            Visual source detected · image_url: {match.image_url ? "yes" : "no"}
                           </p>
                         )}
 
-                        {match.chunk_type === "figure" && match.image_url && (
+                        {(match.chunk_type === "figure" || match.chunk_type === "image") &&
+                        match.image_url && (
                           <img
                             src={match.image_url}
                             alt={match.caption || "Retrieved figure"}
@@ -999,7 +987,7 @@ async function handleComparePapers() {
                 )}
               </div>
             </section>
-          </div>SK 
+          </div>
 
           <section className="rounded-[2rem] border border-white/70 bg-white/75 p-6 shadow-2xl shadow-slate-200/70 backdrop-blur-xl">
             <h2 className="mb-5 text-2xl font-bold text-slate-900">

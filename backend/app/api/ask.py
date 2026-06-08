@@ -45,7 +45,7 @@ class MatchOut(BaseModel):
     bm25_rank: int | None = None
 
     text: str
-
+    figure_number: int | None = None
     document_id: str | None = None
     project_id: str | None = None
     user_id: str | None = None
@@ -226,6 +226,7 @@ def normalize_matches(results: dict, top_k: int = 5) -> list[MatchOut]:
                 image_s3_key=image_s3_key,
                 image_url=image_url,
                 table_markdown=item.get("table_markdown"),
+                figure_number=item.get("figure_number"),
 
                 
             )
@@ -271,6 +272,24 @@ def build_context(results: dict, top_k: int = 8) -> str:
             f"chunk={item.get('chunk_index')}"
         )
     return "\n\n---\n\n".join(context_parts)
+
+
+def enrich_results_with_image_urls(results: dict) -> dict:
+    for key in ["merged_results", "vector_results", "bm25_results", "rrf_results"]:
+        items = results.get(key)
+
+        if not isinstance(items, list):
+            continue
+
+        for item in items:
+            image_s3_key = item.get("image_s3_key")
+
+            if image_s3_key and not item.get("image_url"):
+                item["image_url"] = get_presigned_url(image_s3_key)
+
+    return results
+
+
 
 
 def build_messages(context: str, user_query: str):
@@ -392,6 +411,8 @@ def ask(
         if not isinstance(results, dict):
             raise RuntimeError(f"search_chunks returned non-dict result: {type(results)}")
 
+        results = enrich_results_with_image_urls(results)
+
         top_matches = normalize_matches(results, top_k=5)
         context = build_context(results, top_k=8)
 
@@ -480,6 +501,8 @@ def ask_stream(
                 )
                 return
 
+            results = enrich_results_with_image_urls(results)
+
             top_matches = normalize_matches(results, top_k=5)
             context = build_context(results, top_k=8)
 
@@ -556,3 +579,6 @@ def is_project_summary_or_comparison_query(query: str) -> bool:
     ]
 
     return any(t in q for t in triggers)
+
+
+

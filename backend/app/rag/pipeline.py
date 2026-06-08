@@ -41,7 +41,7 @@ async def process_uploaded_document(
     if not cleaned_text_only:
         raise ValueError("OCR returned empty text.")
 
-    caption_pages = processing_mode in ["auto", "visual_heavy", "handwritten"]
+    caption_pages = processing_mode in ["scanned_pdf", "visual_heavy", "handwritten"]
 
     print("PROCESSING MODE:", processing_mode)
     print("CAPTION PAGES:", caption_pages)
@@ -139,6 +139,7 @@ async def process_uploaded_document(
                 "chunk_type": "figure",
                 "text": (
                     f"Visual source on page {item.get('page')}.\n"
+                    f"Figure number: {item.get('figure_number')}.\n"
                     f"This is a page-level visual chunk extracted from the PDF.\n"
                     f"If the caption mentions Figure, Fig., Table, Equation, diagram, chart, or architecture, "
                     f"use this chunk for visual/figure-related questions.\n\n"
@@ -147,6 +148,7 @@ async def process_uploaded_document(
                 "caption": item.get("caption"),
                 "page": item.get("page"),
                 "image_s3_key": item.get("image_s3_key"),
+                "figure_number": item.get("figure_number"),
             }
         )
 
