@@ -567,21 +567,7 @@ Next Step (V2.2)
 * Table Extraction
 * Structured Table Retrieval
 
-Then commit:
 
-git add .
-git commit -m "feat: visual rag v2.1 page-level visual retrieval"
-git push
-
-This is a meaningful milestone because you've moved from:
-
-Text RAG
-
-to:
-
-Multimodal RAG + Visual Retrieval
-
-which is a substantial upgrade over the previous MVP.
 
 
 ---
