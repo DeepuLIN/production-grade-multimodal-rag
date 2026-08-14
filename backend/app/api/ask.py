@@ -450,6 +450,8 @@ def ask(
             filters=filters,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         print("❌ ASK ERROR:", str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -579,6 +581,5 @@ def is_project_summary_or_comparison_query(query: str) -> bool:
     ]
 
     return any(t in q for t in triggers)
-
 
 

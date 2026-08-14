@@ -51,9 +51,10 @@ def health_db():
 @router.get("/api/health/qdrant")
 def health_qdrant():
     try:
-        from app.rag.vector_store import client  # assumes qdrant client exposed
+        from app.rag.vector_store import get_qdrant_client
 
         # lightweight metadata call (NO embedding/search)
+        client = get_qdrant_client()
         client.get_collections()
 
         return {

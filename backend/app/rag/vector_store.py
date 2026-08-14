@@ -741,18 +741,7 @@ def search_chunks(
 
     except Exception as e:
         print("SEARCH FAILED:", str(e))
-        return {
-            "merged_results": [],
-            "vector_results": [],
-            "bm25_results": [],
-            "rrf_results": [],
-            "reranking": {
-                "enabled": False,
-                "applied": False,
-                "model": None,
-                "error": str(e),
-            },
-        }
+        raise
 
 
 def delete_document_chunks(
